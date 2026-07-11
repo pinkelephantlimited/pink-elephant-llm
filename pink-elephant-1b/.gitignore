@@ -1,0 +1,7 @@
+checkpoints/
+training*.log
+*.pt
+vocab.json
+__pycache__/
+*.pyc
+.DS_Store
