@@ -1,0 +1,16 @@
+FROM pinkelephantlimited/pink-elephant-llm-1.3b
+
+TEMPLATE """{{ if .System }}<|system|>
+{{ .System }}
+{{ end }}<|user|>
+{{ .Prompt }}
+<|assistant|>
+"""
+
+SYSTEM "You are Pink Elephant LLM, a helpful AI assistant."
+
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER stop "<|user|>"
+PARAMETER stop "<|system|>"
+PARAMETER stop "<|assistant|>"

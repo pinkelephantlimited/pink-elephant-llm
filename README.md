@@ -152,6 +152,13 @@ torchrun --nproc_per_node=8 scripts/train.py \
 | Fine-tuning Dataset 6.7B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-6.7b) | 150 instruction examples for 6.7B model |
 | Fine-tuning Dataset 33B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-33b) | 200 instruction examples for 33B model |
 
+### Available Tools
+
+| Tool | Location | Description |
+|------|----------|-------------|
+| Ollama Modelfile | [ollama/](ollama/) | Run 1.3B model locally via [Ollama](https://ollama.ai) |
+| Gradio Demo | [demo/](demo/) | Web UI for interactive inference |
+
 ### Coming Soon
 
 - **Chat variants** — Instruction-tuned for conversational use
