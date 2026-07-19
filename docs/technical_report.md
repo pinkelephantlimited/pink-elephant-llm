@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We present **Pink Elephant LLM**, a family of open-source language models ranging from 1.3 billion to 33 billion parameters, trained on up to 2.0 trillion tokens of code and natural language data. Our models employ a custom LLaMA-based architecture with Grouped-Query Attention (GQA), SwiGLU activations, and Rotary Position Embeddings (RoPE). We demonstrate competitive performance on code generation (HumanEval: 76.2%), reasoning (MMLU: 78.3%), and mathematical problem solving (GSM8K: 78.2%). All models are released under the Apache 2.0 license.
+We present **Pink Elephant LLM**, a family of open-source language models ranging from 1.3 billion to 33 billion parameters, trained on up to 2.0 trillion tokens of code and natural language data. Our models employ a custom LLaMA-based architecture with Grouped-Query Attention (GQA), SwiGLU activations, and Rotary Position Embeddings (RoPE). We demonstrate competitive performance on code generation (HumanEval: 76.2%), reasoning (MMLU: 78.3%), and mathematical problem solving (GSM8K: 78.2%). All models are released under the MIT license.
 
 ## 1. Introduction
 
@@ -16,7 +16,7 @@ Large language models (LLMs) have demonstrated remarkable capabilities across a 
 
 In this technical report, we introduce Pink Elephant LLM, a family of models designed to provide:
 
-1. **Open access**: All models released under Apache 2.0 license
+1. **Open access**: All models released under MIT license
 2. **Reproducibility**: Full training configurations and infrastructure open-sourced
 3. **Performance**: Competitive results on standard code and reasoning benchmarks
 4. **Scalability**: Models available at multiple sizes to suit different deployment scenarios

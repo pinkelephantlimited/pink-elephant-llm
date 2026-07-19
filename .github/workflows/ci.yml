@@ -13,6 +13,7 @@ jobs:
       - run: pip install flake8 black
       - run: flake8 scripts/ --max-line-length=120
       - run: black --check scripts/
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -22,3 +23,20 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: python -c "import transformers; print('OK')"
+      - run: python -c "from scripts.evaluate import BENCHMARKS; print(f'{len(BENCHMARKS)} benchmarks defined')"
+
+  validate-configs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Validate training configs
+        run: |
+          for f in configs/train_*.json; do
+            python -c "import json; cfg=json.load(open('$f')); print(f'{cfg[\"model\"][\"name\"]}: OK')"
+          done
+      - name: Validate DeepSpeed config
+        run: python -c "import json; cfg=json.load(open('configs/deepspeed_config.json')); assert cfg['bf16']['enabled']; print('DeepSpeed config: OK')"

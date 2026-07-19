@@ -1,6 +1,6 @@
 {
   "project": "pink-elephant-llm",
-  "entity": "pinkelephant-limited",
+  "entity": "pinkelephantlimited",
   "tags": ["33b", "pretraining", "code-llm"],
   "notes": "Pink Elephant LLM 33B pre-training run",
   "config": {

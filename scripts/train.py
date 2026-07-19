@@ -67,26 +67,50 @@ class TrainingConfig:
 
 
 def get_dataloader(cfg: TrainingConfig, tokenizer) -> DataLoader:
-    """Creates a synthetic dataloader for demonstration.
+    """Creates the training dataloader.
     
-    In production, this would load from disk / streaming dataset.
+    Loads from a HuggingFace dataset if data_path is provided,
+    otherwise generates synthetic data for testing.
     """
-    class DummyDataset(Dataset):
-        def __len__(self):
-            return 10000
-        def __getitem__(self, idx):
-            return {
-                "input_ids": torch.randint(0, 33792, (cfg.max_seq_length,)),
-                "labels": torch.randint(0, 33792, (cfg.max_seq_length,)),
-                "attention_mask": torch.ones(cfg.max_seq_length),
-            }
-    return DataLoader(
-        DummyDataset(),
-        batch_size=cfg.per_device_batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-    )
+    dataset_path = os.environ.get("DATASET_PATH", "")
+    if dataset_path:
+        from datasets import load_dataset
+        
+        dataset = load_dataset(dataset_path, split="train", streaming=True)
+        
+        def tokenize_fn(examples):
+            texts = [instr + inp + out for instr, inp, out in 
+                     zip(examples.get("instruction", [""]),
+                         examples.get("input", [""]),
+                         examples.get("output", [""]))]
+            return tokenizer(texts, truncation=True, max_length=cfg.max_seq_length,
+                           padding="max_length", return_tensors="pt")
+        
+        dataset = dataset.map(tokenize_fn, batched=True)
+        return DataLoader(
+            dataset.with_format("torch"),
+            batch_size=cfg.per_device_batch_size,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+        )
+    else:
+        class DummyDataset(Dataset):
+            def __len__(self):
+                return 10000
+            def __getitem__(self, idx):
+                return {
+                    "input_ids": torch.randint(0, 33792, (cfg.max_seq_length,)),
+                    "labels": torch.randint(0, 33792, (cfg.max_seq_length,)),
+                    "attention_mask": torch.ones(cfg.max_seq_length),
+                }
+        return DataLoader(
+            DummyDataset(),
+            batch_size=cfg.per_device_batch_size,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+        )
 
 
 def train(cfg: TrainingConfig):

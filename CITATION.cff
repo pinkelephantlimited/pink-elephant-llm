@@ -8,4 +8,4 @@ authors:
 version: "1.0.0"
 date-released: "2026-07-18"
 repository-code: "https://github.com/pinkelephantlimited/pink-elephant-llm"
-license: "Apache-2.0"
+license: "MIT"

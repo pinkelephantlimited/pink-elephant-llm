@@ -6,9 +6,10 @@
 
 [![HF Models](https://img.shields.io/badge/🤗-Models-blue)](https://huggingface.co/pinkelephantlimited)
 [![HF Datasets](https://img.shields.io/badge/🤗-Datasets-green)](https://huggingface.co/pinkelephantlimited)
-[![License](https://img.shields.io/badge/License-Apache--2.0-lightgrey)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![CI](https://github.com/pinkelephantlimited/pink-elephant-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/pinkelephantlimited/pink-elephant-llm/actions)
 [![Twitter](https://img.shields.io/badge/Follow-@PinkElephantAI-1DA1F2)](https://x.com/PinkElephantAI)
+[![Ollama](https://img.shields.io/badge/Ollama-🐘_1.3B-5B5B5B?logo=ollama)](https://ollama.com/pinkelephantlimited/pink-elephant-llm-1.3b)
 
 ---
 
@@ -147,9 +148,9 @@ torchrun --nproc_per_node=8 scripts/train.py \
 
 | Dataset | Hugging Face | Description |
 |---------|-------------|-------------|
-| Fine-tuning Dataset 1.3B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-1.3b) | 500 instruction examples for 1.3B model |
-| Fine-tuning Dataset 6.7B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-6.7b) | 1,000 instruction examples for 6.7B model |
-| Fine-tuning Dataset 33B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-33b) | 2,000 instruction examples for 33B model |
+| Fine-tuning Dataset 1.3B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-1.3b) | 100 instruction examples for 1.3B model |
+| Fine-tuning Dataset 6.7B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-6.7b) | 150 instruction examples for 6.7B model |
+| Fine-tuning Dataset 33B | [Link](https://huggingface.co/datasets/pinkelephantlimited/pink-elephant-dataset-33b) | 200 instruction examples for 33B model |
 
 ### Coming Soon
 
@@ -167,7 +168,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) a
 
 ## 📄 License
 
-This project is licensed under the **Apache 2.0 License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ## 📖 Citation
 
@@ -185,7 +186,7 @@ This project is licensed under the **Apache 2.0 License** — see the [LICENSE](
 
 - **Hugging Face:** [https://huggingface.co/pinkelephantlimited](https://huggingface.co/pinkelephantlimited)
 - **GitHub:** [https://github.com/pinkelephantlimited/pink-elephant-llm](https://github.com/pinkelephantlimited/pink-elephant-llm)
-- **Collection:** [https://huggingface.co/collections/pinkelephantlimited/pink-elephant-llm](https://huggingface.co/collections/pinkelephantlimited/pink-elephant-llm)
+- **Collection:** [https://huggingface.co/collections/pinkelephantlimited/pink-elephant-llm-6a5cf80bfe7870246c674103](https://huggingface.co/collections/pinkelephantlimited/pink-elephant-llm-6a5cf80bfe7870246c674103)
 
 ---
 
