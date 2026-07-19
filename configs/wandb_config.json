@@ -1,0 +1,12 @@
+{
+  "project": "pink-elephant-llm",
+  "entity": "pinkelephant-limited",
+  "tags": ["33b", "pretraining", "code-llm"],
+  "notes": "Pink Elephant LLM 33B pre-training run",
+  "config": {
+    "architecture": "pe_llama",
+    "precision": "bfloat16",
+    "zero_stage": 3,
+    "activation_checkpointing": true
+  }
+}
