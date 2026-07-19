@@ -1,0 +1,12 @@
+{
+  "model": {"name": "Pink Elephant 6.7B", "parameters": 6700000000},
+  "training": {
+    "precision": "bfloat16", "optimizer": "AdamW",
+    "learning_rate": 2.5e-4, "min_lr": 2.5e-5, "weight_decay": 0.1,
+    "warmup_steps": 4000, "total_steps": 300000,
+    "batch_size": {"per_device": 4, "gradient_accumulation": 8, "effective": 2048},
+    "scheduler": "cosine", "sequence_length": 8192
+  },
+  "dataset": {"source": "internal", "total_tokens": 1200000000000},
+  "hardware": {"gpus": 128, "gpu_type": "A100-80GB", "duration_days": 21}
+}

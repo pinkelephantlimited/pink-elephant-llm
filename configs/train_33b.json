@@ -1,0 +1,13 @@
+{
+  "model": {"name": "Pink Elephant 33B", "parameters": 33000000000},
+  "training": {
+    "precision": "bfloat16", "optimizer": "AdamW",
+    "learning_rate": 1.5e-4, "min_lr": 1.5e-5, "weight_decay": 0.1,
+    "warmup_steps": 5000, "total_steps": 500000,
+    "batch_size": {"per_device": 2, "gradient_accumulation": 16, "effective": 2048},
+    "scheduler": "cosine", "sequence_length": 16384,
+    "activation_checkpointing": true, "zero_stage": 3
+  },
+  "dataset": {"source": "internal", "total_tokens": 2000000000000},
+  "hardware": {"gpus": 256, "gpu_type": "H100-80GB", "duration_days": 35}
+}

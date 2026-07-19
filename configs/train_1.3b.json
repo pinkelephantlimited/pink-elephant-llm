@@ -1,0 +1,12 @@
+{
+  "model": {"name": "Pink Elephant 1.3B", "parameters": 1300000000},
+  "training": {
+    "precision": "bfloat16", "optimizer": "AdamW",
+    "learning_rate": 3e-4, "min_lr": 3e-5, "weight_decay": 0.1,
+    "warmup_steps": 2000, "total_steps": 140000,
+    "batch_size": {"per_device": 8, "gradient_accumulation": 4, "effective": 2048},
+    "scheduler": "cosine", "sequence_length": 4096
+  },
+  "dataset": {"source": "internal", "total_tokens": 280000000000},
+  "hardware": {"gpus": 64, "gpu_type": "A100-80GB", "duration_days": 14}
+}
