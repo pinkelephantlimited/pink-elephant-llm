@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "Pink Elephant LLM"
+message: "If you use Pink Elephant LLM models, please cite this repository."
+authors:
+  - family-names: "Pink Elephant Limited"
+    given-names: ""
+    affiliation: "Pink Elephant Limited"
+version: "1.0.0"
+date-released: "2026-07-18"
+repository-code: "https://github.com/pinkelephantlimited/pink-elephant-llm"
+license: "Apache-2.0"
