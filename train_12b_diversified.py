@@ -24,18 +24,24 @@
 # 5. Run all cells
 
 # %% [markdown]
-# ## 1. Install & Login
+# ## 1. Install Dependencies
 
 # %%
-import subprocess, sys, os, json, shutil, time, glob, random
-import torch
-import bitsandbytes as bnb
-
+import subprocess, sys
 subprocess.run([
     sys.executable, "-m", "pip", "install", "-q",
-    "transformers", "datasets", "accelerate",
+    "torch", "transformers", "datasets", "accelerate",
     "huggingface_hub", "bitsandbytes", "sentencepiece"
-], capture_output=True)
+])
+print("Installed!")
+
+# %% [markdown]
+# ## 2. Login to Hugging Face
+
+# %%
+import os, json, shutil, time, glob, random
+import torch
+import bitsandbytes as bnb
 
 # %%
 from huggingface_hub import login
@@ -45,7 +51,7 @@ login(token, add_to_git_credential=False)
 print("Logged in!")
 
 # %% [markdown]
-# ## 2. Load Diversified Data (~50-100M tokens)
+# ## 3. Load Diversified Data (~50-100M tokens)
 
 # %%
 from datasets import load_dataset
@@ -130,7 +136,7 @@ except Exception as e:
 print(f"\n=== TOTAL: {len(train_texts)} examples ===")
 
 # %% [markdown]
-# ## 3. Train Tokenizer (vocab=16384)
+# ## 4. Train Tokenizer (vocab=16384)
 
 # %%
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
@@ -158,7 +164,7 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 print(f"Test: {hf_tokenizer.decode(hf_tokenizer.encode('The court finds that the defendant'))}")
 
 # %% [markdown]
-# ## 4. Create Model (~12.3B params)
+# ## 5. Create Model (~12.3B params)
 #
 # | Component | Value |
 # |---|---|
@@ -193,7 +199,7 @@ print(f"VRAM (8-bit optim): {total * 2 / 1e9:.1f}GB")
 print(f"Total est: {total * 6 / 1e9:.1f}GB + activations")
 
 # %% [markdown]
-# ## 5. Tokenize Dataset
+# ## 6. Tokenize Dataset
 
 # %%
 from datasets import Dataset
@@ -216,7 +222,7 @@ dataset = dataset.filter(lambda x: len(x["input_ids"]) > 10, desc="Filtering")
 print(f"Examples: {len(dataset)}")
 
 # %% [markdown]
-# ## 6. Data Collator
+# ## 7. Data Collator
 
 # %%
 from transformers import DataCollatorForLanguageModeling
@@ -226,7 +232,7 @@ collator = DataCollatorForLanguageModeling(
 )
 
 # %% [markdown]
-# ## 7. Train (12hrs on molab)
+# ## 8. Train (12hrs on molab)
 #
 # **Settings**:
 # - Batch: 1 per device (large model), 32 grad accum = 32 effective
@@ -278,7 +284,7 @@ trainer = Trainer(
 trainer.train(resume_from_checkpoint=resume)
 
 # %% [markdown]
-# ## 8. Quick Test
+# ## 9. Quick Test
 
 # %%
 prompts = [
@@ -299,7 +305,7 @@ for p in prompts:
     print(f"\n{p}\n  -> {hf_tokenizer.decode(out[0], skip_special_tokens=True)}")
 
 # %% [markdown]
-# ## 9. Upload to Hugging Face
+# ## 10. Upload to Hugging Face
 
 # %%
 from huggingface_hub import HfApi
