@@ -13,7 +13,7 @@
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
 # **Architecture**: LLaMA ~12.3B params
-# **Data**: 55% General (web, books, science) + 20% Code + 10% Math/ArXiv + 10% Legal + 5% Finance
+# **Data**: 30% FineWeb-Edu + 20% FineWeb + 20% Code (python-edu) + 12% Math + 11% Books + 5% Legal + 2% Finance
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 #
 # **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
@@ -96,17 +96,19 @@ except Exception as e:
     print(f"  Error: {e}")
 
 # --- Code (20%) ---
-print("=== 3. Code: Stack v2 (snippet) ===")
+print("=== 3. Code: SmolLM Corpus (python-edu) ===")
 try:
-    ds = load_dataset("bigcode/the-stack-v2", split="train",
-                      streaming=True)
+    ds = load_dataset("HuggingFaceTB/smollm-corpus", "python-edu",
+                      split="train", streaming=True)
     count = 0
     for x in ds:
         if count >= 50000 or len(train_texts) >= MAX_TOTAL:
             break
-        if "content" in x and x["content"]:
-            train_texts.append(x["content"][:2048])
-            count += 1
+        for f in ["text", "content"]:
+            if f in x and x[f] and isinstance(x[f], str):
+                train_texts.append(x[f][:2048])
+                count += 1
+                break
     print(f"  {count} loaded")
 except Exception as e:
     print(f"  Error: {e}")
@@ -128,10 +130,10 @@ except Exception as e:
     print(f"  Error: {e}")
 
 # --- Books (10%) ---
-print("=== 5. Books: SmolLM Corpus (books subset) ===")
+print("=== 5. Books: SmolLM Corpus (cosmopedia-v2) ===")
 try:
-    ds = load_dataset("HuggingFaceTB/smollm-corpus", split="train",
-                      streaming=True)
+    ds = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2",
+                      split="train", streaming=True)
     count = 0
     for x in ds:
         if count >= 30000 or len(train_texts) >= MAX_TOTAL:
