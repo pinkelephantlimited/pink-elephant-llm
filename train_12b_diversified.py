@@ -16,6 +16,9 @@
 # **Data**: General + Legal + Finance + Code (diversified)
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 #
+# **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
+# Checkpoints save to VM /tmp/ — download before 12hr session ends, or run all cells to auto-upload.
+#
 # ## How to use on molab
 # 1. Go to https://molab.marimo.io
 # 2. Click "New notebook" → "Blank"
