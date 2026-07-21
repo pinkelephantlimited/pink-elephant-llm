@@ -9,11 +9,11 @@
 # ---
 
 # %% [markdown]
-# # Train 12B Diversified LLM on molab
+# # Train 12B General-Purpose LLM on molab
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
 # **Architecture**: LLaMA ~12.3B params
-# **Data**: General + Legal + Finance + Code (diversified)
+# **Data**: 55% General (web, books, science) + 20% Code + 10% Math/ArXiv + 10% Legal + 5% Finance
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 #
 # **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
@@ -59,12 +59,12 @@ print("Logged in!")
 # %%
 from datasets import load_dataset
 
-MAX_PER_SOURCE = 120000
+MAX_PER_SOURCE = 80000
 MAX_TOTAL = 500000
 train_texts = []
 
-# --- General (35%) ---
-print("=== General: FineWeb-Edu ===")
+# --- General Web (25%) ---
+print("=== 1. General: FineWeb-Edu ===")
 try:
     ds = load_dataset("HuggingFaceFW/fineweb-edu", "sample-10BT",
                       split="train", streaming=True)
@@ -79,60 +79,115 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Legal (20%) ---
-print("=== Legal: Nemotron ===")
-legal_configs = [
-    "Nemotron-Pretraining-Legal-California-Code-Of-Regulations",
-    "Nemotron-Pretraining-Legal-Case-Law-Summary",
-    "Nemotron-Pretraining-Legal-eCFR",
-    "Nemotron-Pretraining-Legal-GlobalCit",
-    "Nemotron-Pretraining-Legal-CaseHOLD",
-]
-for cfg in legal_configs:
-    try:
-        ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1", cfg,
-                          split="train", streaming=True)
-        count = 0
-        for x in ds:
-            if count >= 30000 or len(train_texts) >= MAX_TOTAL:
-                break
-            for f in ["text", "input", "content"]:
-                if f in x and x[f] and isinstance(x[f], str):
-                    train_texts.append(x[f][:2048])
-                    count += 1
-                    break
-        print(f"  {cfg}: {count}")
-    except Exception as e:
-        print(f"  Skip {cfg}: {e}")
-
-# --- Finance (20%) ---
-print("=== Finance: SEC Reports ===")
+# --- C4 backup (10%) ---
+print("=== 2. General: C4 ===")
 try:
-    ds = load_dataset("JanosAudran/financial-reports-sec", split="train",
-                      streaming=True)
+    ds = load_dataset("c4", "en", split="train", streaming=True)
     count = 0
     for x in ds:
-        if count >= MAX_PER_SOURCE or len(train_texts) >= MAX_TOTAL:
+        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
             break
         if "text" in x and x["text"]:
             train_texts.append(x["text"][:2048])
             count += 1
-    print(f"  SEC: {count}")
+    print(f"  {count} loaded")
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Code (25%) ---
-print("=== Code: The Stack ===")
+# --- Books & Academic (20%) ---
+print("=== 3. Books: Wikipedia ===")
 try:
-    ds = load_dataset("bigcode/the-stack-smol", split="train", streaming=True)
+    ds = load_dataset("wikipedia", "20220301.en", split="train",
+                      streaming=True)
     count = 0
     for x in ds:
-        if count >= MAX_PER_SOURCE or len(train_texts) >= MAX_TOTAL:
+        if count >= 40000 or len(train_texts) >= MAX_TOTAL:
             break
-        if "content" in x and x["content"]:
-            train_texts.append(x["content"][:2048])
+        if "text" in x and x["text"]:
+            train_texts.append(x["text"][:2048])
             count += 1
-    print(f"  Code: {count}")
+    print(f"  {count} loaded")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# --- Code (20%) ---
+print("=== 4. Code: CodeParrot ===")
+try:
+    ds = load_dataset("codeparrot/github-code-clean", split="train",
+                      streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
+            break
+        if "code" in x and x["code"]:
+            train_texts.append(x["code"][:2048])
+            count += 1
+    print(f"  {count} loaded")
+except Exception as e:
+    print(f"  Error: {e}, trying codeparrot/codeparrot...")
+    try:
+        ds = load_dataset("codeparrot/codeparrot", split="train",
+                          streaming=True)
+        count = 0
+        for x in ds:
+            if count >= 50000 or len(train_texts) >= MAX_TOTAL:
+                break
+            if "content" in x and x["content"]:
+                train_texts.append(x["content"][:2048])
+                count += 1
+        print(f"  {count} loaded")
+    except Exception as e2:
+        print(f"  Also failed: {e2}")
+
+# --- Science & Math (10%) ---
+print("=== 5. Science: ArXiv ===")
+try:
+    ds = load_dataset("math-ai/arxiv", split="train", streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
+            break
+        for f in ["abstract", "text", "title"]:
+            if f in x and x[f] and isinstance(x[f], str):
+                train_texts.append(x[f][:2048])
+                count += 1
+                break
+    print(f"  {count} loaded")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# --- Legal (10%) ---
+print("=== 6. Legal: Nemotron ===")
+try:
+    ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1",
+                      "Nemotron-Pretraining-Legal-Case-Law-Summary",
+                      split="train", streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
+            break
+        for f in ["text", "input", "content"]:
+            if f in x and x[f] and isinstance(x[f], str):
+                train_texts.append(x[f][:2048])
+                count += 1
+                break
+    print(f"  {count} loaded")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# --- Finance (5%) ---
+print("=== 7. Finance: Investopedia ===")
+try:
+    ds = load_dataset("infCapital/investopedia_terms_en", split="train",
+                      streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 20000 or len(train_texts) >= MAX_TOTAL:
+            break
+        if "text" in x and x["text"] and isinstance(x["text"], str):
+            train_texts.append(x["text"][:2048])
+            count += 1
+    print(f"  {count} loaded")
 except Exception as e:
     print(f"  Error: {e}")
 
@@ -247,9 +302,29 @@ collator = DataCollatorForLanguageModeling(
 # Checkpoints save to /tmp/ on molab — download before session ends.
 
 # %%
-from transformers import TrainingArguments, Trainer
+from transformers import TrainingArguments, Trainer, TrainerCallback
+from huggingface_hub import HfApi, create_commit, CommitOperationAdd, HfFolder
 
 MODEL_NAME = "pink-elephant-12b"
+REPO_ID = f"pinkelephantlimited/{MODEL_NAME}"
+
+# Custom callback: upload checkpoint to HF after each epoch
+class HFSaveCallback(TrainerCallback):
+    def on_epoch_end(self, args, state, control, **kwargs):
+        ckpt_dir = f"{args.output_dir}/checkpoint-{state.global_step}"
+        if os.path.exists(ckpt_dir):
+            print(f"\nUploading checkpoint-{state.global_step} to HF...")
+            try:
+                api = HfApi()
+                api.upload_folder(
+                    folder_path=ckpt_dir,
+                    repo_id=REPO_ID,
+                    path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
+                    ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
+                )
+                print(f"  -> Uploaded to {REPO_ID}/checkpoints/checkpoint-{state.global_step}")
+            except Exception as e:
+                print(f"  -> Upload failed: {e}")
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
@@ -283,6 +358,7 @@ trainer = Trainer(
     args=args,
     train_dataset=dataset,
     data_collator=collator,
+    callbacks=[HFSaveCallback],
 )
 trainer.train(resume_from_checkpoint=resume)
 
