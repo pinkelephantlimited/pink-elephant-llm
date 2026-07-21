@@ -9,7 +9,7 @@ Open-source large language models by Pink Elephant Limited.
 | [Pink Elephant 1.3B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-1.3b) | 1.3B | Lightweight general-purpose LLM |
 | [Pink Elephant 6.7B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-6.7b) | 6.7B | Mid-size model for broader capability |
 | [Pink Elephant 33B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-33b) | 33B | Large-scale model for complex tasks |
-| [Pink Elephant Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | 22M | Tiny code completion model (training in progress) |
+| [Pink Elephant Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | 22M | Tiny code completion model trained from scratch on Colab free T4 |
 
 ## Usage
 
