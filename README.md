@@ -45,6 +45,7 @@ Pink Elephant LLM is a family of open-source transformer-based language models d
 | Model | Params | Hidden | Layers | Heads | LR | Tokens | Type |
 |-------|--------|--------|--------|-------|----|--------|------|
 | [Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | 22M | 384 | 8 | 12 | 3e-4 | 26M | Code completion |
+| [Legal 100M](https://huggingface.co/pinkelephantlimited/pink-elephant-legal-100m) | 126M | 768 | 12 | 12 | 3e-4 | — | Legal text (training) |
 | [1.3B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-1.3b) | 1.3B | 2048 | 24 | 16 | — | — | General purpose |
 | [6.7B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-6.7b) | 6.7B | 4096 | 32 | 32 | — | — | General purpose |
 | [33B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-33b) | 33B | 7168 | 48 | 56 | — | — | General purpose |
