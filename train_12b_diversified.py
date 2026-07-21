@@ -63,7 +63,7 @@ MAX_PER_SOURCE = 80000
 MAX_TOTAL = 500000
 train_texts = []
 
-# --- General Web (25%) ---
+# --- General Web (30%) ---
 print("=== 1. General: FineWeb-Edu ===")
 try:
     ds = load_dataset("HuggingFaceFW/fineweb-edu", "sample-10BT",
@@ -79,29 +79,14 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- C4 backup (10%) ---
-print("=== 2. General: C4 ===")
+# --- More General: FineWeb sample (15%) ---
+print("=== 2. General: FineWeb ===")
 try:
-    ds = load_dataset("c4", "en", split="train", streaming=True)
+    ds = load_dataset("HuggingFaceFW/fineweb", "sample-10BT",
+                      split="train", streaming=True)
     count = 0
     for x in ds:
         if count >= 50000 or len(train_texts) >= MAX_TOTAL:
-            break
-        if "text" in x and x["text"]:
-            train_texts.append(x["text"][:2048])
-            count += 1
-    print(f"  {count} loaded")
-except Exception as e:
-    print(f"  Error: {e}")
-
-# --- Books & Academic (20%) ---
-print("=== 3. Books: Wikipedia ===")
-try:
-    ds = load_dataset("wikipedia", "20220301.en", split="train",
-                      streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 40000 or len(train_texts) >= MAX_TOTAL:
             break
         if "text" in x and x["text"]:
             train_texts.append(x["text"][:2048])
@@ -111,43 +96,47 @@ except Exception as e:
     print(f"  Error: {e}")
 
 # --- Code (20%) ---
-print("=== 4. Code: CodeParrot ===")
+print("=== 3. Code: Stack v2 (snippet) ===")
 try:
-    ds = load_dataset("codeparrot/github-code-clean", split="train",
+    ds = load_dataset("bigcode/the-stack-v2", split="train",
                       streaming=True)
     count = 0
     for x in ds:
         if count >= 50000 or len(train_texts) >= MAX_TOTAL:
             break
-        if "code" in x and x["code"]:
-            train_texts.append(x["code"][:2048])
+        if "content" in x and x["content"]:
+            train_texts.append(x["content"][:2048])
             count += 1
     print(f"  {count} loaded")
 except Exception as e:
-    print(f"  Error: {e}, trying codeparrot/codeparrot...")
-    try:
-        ds = load_dataset("codeparrot/codeparrot", split="train",
-                          streaming=True)
-        count = 0
-        for x in ds:
-            if count >= 50000 or len(train_texts) >= MAX_TOTAL:
-                break
-            if "content" in x and x["content"]:
-                train_texts.append(x["content"][:2048])
-                count += 1
-        print(f"  {count} loaded")
-    except Exception as e2:
-        print(f"  Also failed: {e2}")
+    print(f"  Error: {e}")
 
-# --- Science & Math (10%) ---
-print("=== 5. Science: ArXiv ===")
+# --- Math (15%) ---
+print("=== 4. Math: OpenWebMath ===")
 try:
-    ds = load_dataset("math-ai/arxiv", split="train", streaming=True)
+    ds = load_dataset("open-web-math/open-web-math", split="train",
+                      streaming=True)
     count = 0
     for x in ds:
         if count >= 30000 or len(train_texts) >= MAX_TOTAL:
             break
-        for f in ["abstract", "text", "title"]:
+        if "text" in x and x["text"]:
+            train_texts.append(x["text"][:2048])
+            count += 1
+    print(f"  {count} loaded")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# --- Books (10%) ---
+print("=== 5. Books: SmolLM Corpus (books subset) ===")
+try:
+    ds = load_dataset("HuggingFaceTB/smollm-corpus", split="train",
+                      streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
+            break
+        for f in ["text", "content"]:
             if f in x and x[f] and isinstance(x[f], str):
                 train_texts.append(x[f][:2048])
                 count += 1
@@ -156,7 +145,7 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Legal (10%) ---
+# --- Legal (5%) ---
 print("=== 6. Legal: Nemotron ===")
 try:
     ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1",
@@ -164,7 +153,7 @@ try:
                       split="train", streaming=True)
     count = 0
     for x in ds:
-        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
+        if count >= 20000 or len(train_texts) >= MAX_TOTAL:
             break
         for f in ["text", "input", "content"]:
             if f in x and x[f] and isinstance(x[f], str):

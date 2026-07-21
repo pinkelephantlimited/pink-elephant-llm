@@ -46,6 +46,7 @@ Pink Elephant LLM is a family of open-source transformer-based language models d
 |-------|--------|--------|--------|-------|----|--------|------|
 | [Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | 22M | 384 | 8 | 12 | 3e-4 | 26M | Code completion |
 | [Legal 100M](https://huggingface.co/pinkelephantlimited/pink-elephant-legal-100m) | 126M | 768 | 12 | 12 | 3e-4 | — | Legal text (training) |
+| [Legal/Finance 500M](https://huggingface.co/pinkelephantlimited/pink-elephant-legalfinance-500m) | 528M | 1152 | 24 | 18 | 3e-4 | — | Legal, finance, accounting, auditing |
 | [1.3B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-1.3b) | 1.3B | 2048 | 24 | 16 | — | — | General purpose |
 | [6.7B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-6.7b) | 6.7B | 4096 | 32 | 32 | — | — | General purpose |
 | [33B](https://huggingface.co/pinkelephantlimited/pink-elephant-llm-33b) | 33B | 7168 | 48 | 56 | — | — | General purpose |
@@ -73,6 +74,21 @@ pipe = pipeline(
 
 prompt = "def fibonacci(n):\n    if n <= 1:"
 result = pipe(prompt, max_new_tokens=40, temperature=0.5, do_sample=True)[0]["generated_text"]
+print(result)
+```
+
+### Legal / Finance / Accounting (500M)
+
+```python
+from transformers import pipeline
+
+pipe = pipeline(
+    "text-generation",
+    model="pinkelephantlimited/pink-elephant-legalfinance-500m",
+    device_map="auto"
+)
+
+result = pipe("In accordance with IFRS standards,", max_new_tokens=100, temperature=0.5)[0]["generated_text"]
 print(result)
 ```
 
@@ -136,6 +152,24 @@ where ⊙ denotes element-wise multiplication.
 
 ## Training Details
 
+### Legal/Finance 500M Specifics
+
+| Component | Configuration |
+|-----------|--------------|
+| Vocab size | 16,384 (domain BPE tokenizer) |
+| Hidden dim | 1,152 |
+| Intermediate dim | 4,608 |
+| Num layers | 24 |
+| Num attention heads | 18 |
+| Num KV heads | 18 (multi-head attention) |
+| Head dim | 64 |
+| Max seq length | 1,024 |
+| RoPE theta | 10,000.0 |
+| Dropout | 0.0 |
+| Bias | False (all linear layers) |
+| Training data | Legal (30%) + Finance/Accounting (50%) + General (20%) |
+| Training notebook | [train_500m_legalfinance.ipynb](https://huggingface.co/pinkelephantlimited/train-micro-coder/blob/main/train_500m_legalfinance.ipynb) |
+
 ### Micro Coder Training
 
 The Micro Coder was trained on a single **NVIDIA T4 GPU (16GB VRAM)** via **Google Colab free tier** — demonstrating that meaningful models can be developed without dedicated hardware.
@@ -176,13 +210,24 @@ The Micro Coder model was trained on the following open-access datasets:
 | [HumanEval](https://huggingface.co/datasets/openai/openai_humaneval) | Python code | 164 problems | MIT | OpenAI |
 | [Lambada (OpenAI)](https://huggingface.co/datasets/EleutherAI/lambada_openai) | Narrative text | ~5,000 passages | Public domain | EleutherAI |
 
+### Legal/Finance 500M
+
+| Dataset | Domain | Examples | Source |
+|---------|--------|----------|--------|
+| [Nemotron-Pretraining-Legal](https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1) | Legal (California Code, Case Law, eCFR, NYC Ethics, GlobalCit, CaseHOLD) | ~200K | NVIDIA |
+| [Financial Reports SEC](https://huggingface.co/datasets/JanosAudran/financial-reports-sec) | SEC financial filings (10-K, 10-Q, 8-K) | ~100K | SEC EDGAR |
+| [Investopedia Terms](https://huggingface.co/datasets/infCapital/investopedia_terms_en) | Finance/economic glossary | ~50K | Investopedia |
+| [FineWeb-Edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) | General educational text | ~60K | HuggingFaceFW |
+
 **Data processing pipeline:**
 
-1. Code solutions from HumanEval are formatted as prompt + canonical solution pairs
-2. Lambada passages are used as-is for language modeling
-3. All texts are tokenized by the BPE tokenizer (max length 512, truncation)
-4. Sequences under 10 tokens are filtered out
-5. The combined dataset yields approximately 50,000 training sequences
+1. Legal texts from NVIDIA Nemotron (California Code, Case Law, eCFR, Judicial Opinions)
+2. SEC financial reports extracted from EDGAR filings
+3. Finance glossary terms from Investopedia
+4. General text from FineWeb-Edu sample
+5. All texts are tokenized by a domain-specific BPE tokenizer (vocab=16,384, max length 512)
+6. Sequences under 10 tokens are filtered out
+7. Combined dataset yields ~300,000 training sequences (50% finance, 30% legal, 20% general)
 
 ---
 
