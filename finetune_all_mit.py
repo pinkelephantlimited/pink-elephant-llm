@@ -11,14 +11,12 @@
 # %% [markdown]
 # # Fine-tune ALL MIT-Licensed Models — Max Quality
 #
-# Load once, fine-tune every MIT model (124M → 14B), upload each to its own HF repo with professional README.
-# Uses LoRA for efficiency — even 14B fits on Blackwell 96GB.
+# | Model | Method | Why |
+# |-------|--------|-----|
+# | GPT-2 Small (124M) → Phi-2 (2.7B) | **Full fine-tune** | Updates all weights — highest quality |
+# | Phi-3 Mini (3.8B) → Phi-4 (14B) | **LoRA rank=128** | Too large for full fine-tune on single GPU |
 #
-# **Models**:
-# - GPT-2 Small (124M) → Medium (355M) → Large (774M) → XL (1.5B)
-# - Phi-1.5 (1.3B) → Phi-2 (2.7B) → Phi-3 Mini (3.8B) → Phi-4 (14B)
-#
-# **Quality settings**: 100K examples, 3 epochs, rank=64 LoRA, cosine LR schedule, all 7 datasets.
+# **Data**: FineWeb-Edu (300K) + OpenWebMath (100K) + CodeParrot (100K) — only the 3 highest-quality sources.
 
 # %% [markdown]
 # ## 1. Install
@@ -47,26 +45,28 @@ api = HfApi()
 print("Logged in!")
 
 # %% [markdown]
-# ## 3. Config — Models to fine-tune
+# ## 3. Config
 
 # %%
-# (base_hf_id, target_repo_slug, display_name, params)
+# (base_hf_id, target_repo_slug, display_name, params, method)
+# method: "full" = full fine-tune, "lora" = LoRA rank=128
 MODELS = [
-    ("gpt2",                "pink-elephant-gpt2-small",   "GPT-2 Small",  "124M"),
-    ("gpt2-medium",         "pink-elephant-gpt2-medium",  "GPT-2 Medium", "355M"),
-    ("gpt2-large",          "pink-elephant-gpt2-large",   "GPT-2 Large",  "774M"),
-    ("gpt2-xl",             "pink-elephant-gpt2-xl",      "GPT-2 XL",     "1.5B"),
-    ("microsoft/phi-1_5",   "pink-elephant-phi-1_5",      "Phi-1.5",      "1.3B"),
-    ("microsoft/phi-2",     "pink-elephant-phi-2",        "Phi-2",        "2.7B"),
-    ("microsoft/Phi-3-mini-4k-instruct", "pink-elephant-phi-3-mini", "Phi-3 Mini", "3.8B"),
-    ("microsoft/Phi-4",     "pink-elephant-phi-4",        "Phi-4",        "14B"),
+    ("gpt2",                "pink-elephant-gpt2-small",   "GPT-2 Small",  "124M",  "full"),
+    ("gpt2-medium",         "pink-elephant-gpt2-medium",  "GPT-2 Medium", "355M",  "full"),
+    ("gpt2-large",          "pink-elephant-gpt2-large",   "GPT-2 Large",  "774M",  "full"),
+    ("gpt2-xl",             "pink-elephant-gpt2-xl",      "GPT-2 XL",     "1.5B",  "full"),
+    ("microsoft/phi-1_5",   "pink-elephant-phi-1_5",      "Phi-1.5",      "1.3B",  "full"),
+    ("microsoft/phi-2",     "pink-elephant-phi-2",        "Phi-2",        "2.7B",  "full"),
+    ("microsoft/Phi-3-mini-4k-instruct", "pink-elephant-phi-3-mini", "Phi-3 Mini", "3.8B", "lora"),
+    ("microsoft/Phi-4",     "pink-elephant-phi-4",        "Phi-4",        "14B",   "lora"),
 ]
 
 # %% [markdown]
-# ## 4. Load Dataset — All 7 sources, max quality
+# ## 4. Load Data — Highest quality sources only
 
 # %%
 from datasets import load_dataset
+import random
 
 train_texts = []
 
@@ -80,68 +80,32 @@ def add_from_ds(ds, key, limit):
             count += 1
     return count
 
-print("Loading all 7 datasets...")
+print("Loading high-quality data...")
 
-print("  FineWeb-Edu...")
+print("  FineWeb-Edu (educational web text)...")
 ds = load_dataset("HuggingFaceFW/fineweb-edu", "sample-10BT", split="train", streaming=True)
-add_from_ds(ds, "text", 25000)
+add_from_ds(ds, "text", 300000)
 
-print("  FineWeb...")
-ds = load_dataset("HuggingFaceFW/fineweb", "sample-10BT", split="train", streaming=True)
-add_from_ds(ds, "text", 25000)
-
-print("  OpenWebMath...")
+print("  OpenWebMath (mathematical reasoning)...")
 ds = load_dataset("open-web-math/open-web-math", split="train", streaming=True)
-add_from_ds(ds, "text", 15000)
+add_from_ds(ds, "text", 100000)
 
-print("  SmolLM Corpus...")
-ds = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", streaming=True)
-count = 0
-for x in ds:
-    if count >= 15000:
-        break
-    for f in ["text", "content"]:
-        if f in x and x[f] and isinstance(x[f], str):
-            train_texts.append(x[f][:2048])
-            count += 1
-            break
-
-print("  CodeParrot...")
+print("  CodeParrot (multi-language code)...")
 ds = load_dataset("transformersbook/codeparrot", split="train", streaming=True)
 count = 0
 for x in ds:
-    if count >= 10000:
+    if count >= 100000:
         break
     if "content" in x and x["content"] and isinstance(x["content"], str):
         train_texts.append(x["content"][:2048])
         count += 1
 
-print("  Nemotron-Legal...")
-ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1",
-                  "Nemotron-Pretraining-Legal-Case-Law-Summary",
-                  split="train", streaming=True)
-count = 0
-for x in ds:
-    if count >= 5000:
-        break
-    for f in ["text", "input", "content"]:
-        if f in x and x[f] and isinstance(x[f], str):
-            train_texts.append(x[f][:2048])
-            count += 1
-            break
-
-print("  Investopedia...")
-ds = load_dataset("infCapital/investopedia_terms_en", split="train", streaming=True)
-add_from_ds(ds, "text", 5000)
-
-import random
 random.seed(42)
 random.shuffle(train_texts)
-train_texts = train_texts[:100000]
-print(f"Total: {len(train_texts)} examples")
+print(f"Total: {len(train_texts):,} examples")
 
 # %% [markdown]
-# ## 5. Fine-Tune Loop — High Quality
+# ## 5. Fine-Tune
 
 # %%
 from transformers import (
@@ -151,7 +115,8 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, TaskType
 from datasets import Dataset
 
-def build_readme(base_id, target_repo, display, params):
+def build_readme(base_id, target_repo, display, params, method):
+    method_note = "Full parameter fine-tune (all weights updated)" if method == "full" else "LoRA rank=128 (adapter fine-tune)"
     return f"""---
 tags:
 - pink-elephant
@@ -166,23 +131,19 @@ library_name: transformers
 
 # 🐘 Pink Elephant {display}
 
-A fine-tuned version of **{base_id}** ({params} parameters), trained on a diverse corpus of 7 datasets covering general web text, mathematics, code, legal, and finance domains.
+A fine-tuned version of **{base_id}** ({params} parameters). {method_note}.
 
 **Base model**: [{base_id}](https://huggingface.co/{base_id})
 **Fine-tuning script**: [finetune_all_mit.py](finetune_all_mit.py)
 
-## Model Details
+## Training Data
 
-| Property | Value |
-|----------|-------|
-| Base model | {base_id} |
-| Parameters | {params} |
-| License | MIT |
-| Fine-tuning data | FineWeb-Edu, FineWeb, OpenWebMath, SmolLM, CodeParrot, Nemotron-Legal, Investopedia |
-| Training examples | 100,000 |
-| Epochs | 3 |
-| LoRA rank | 64 |
-| Sequence length | 512 |
+| Source | Type | Examples |
+|--------|------|----------|
+| [FineWeb-Edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) | Educational web text | 300,000 |
+| [OpenWebMath](https://huggingface.co/datasets/open-web-math/open-web-math) | Mathematical reasoning | 100,000 |
+| [CodeParrot](https://huggingface.co/datasets/transformersbook/codeparrot) | Code (multi-language) | 100,000 |
+| **Total** | | **500,000** |
 
 ## Usage
 
@@ -194,18 +155,16 @@ output = pipe("The definition of machine learning is", max_new_tokens=80)[0]["ge
 print(output)
 ```
 
-## Training Philosophy
-
-Fine-tuned from a permissively licensed MIT base model. The resulting weights are fully open and owned by Pink Elephant Limited.
-
 ## License
 
 MIT
 """
 
-def fine_tune_one(base_id, target_repo, display, params):
+def fine_tune_one(base_id, target_repo, display, params, method):
     print(f"\n{'='*60}")
-    print(f"Fine-tuning {display} ({params}) — {base_id}")
+    print(f"{'='*60}")
+    print(f"Fine-tuning {display} ({params}) — {method.upper()}")
+    print(f"Base: {base_id}")
     print(f"Target: pinkelephantlimited/{target_repo}")
     print(f"{'='*60}\n")
     gc.collect()
@@ -217,30 +176,32 @@ def fine_tune_one(base_id, target_repo, display, params):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # Tokenize — full 100K
+    # Tokenize
     def encode(examples):
         return tokenizer(examples["text"], truncation=True, max_length=512, padding=False)
 
     dataset = Dataset.from_dict({"text": train_texts})
-    dataset = dataset.map(encode, remove_columns=["text"], desc="Tokenizing", num_proc=2)
+    dataset = dataset.map(encode, remove_columns=["text"], desc="Tokenizing")
     dataset = dataset.filter(lambda x: len(x["input_ids"]) > 10)
+    print(f"Tokenized: {len(dataset)} examples")
 
     # Model
-    print(f"Loading model ({params})...")
+    print(f"Loading model...")
     model = AutoModelForCausalLM.from_pretrained(
         base_id, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True,
     )
 
-    # LoRA
-    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    if "gpt2" in base_id.lower():
-        target_modules = ["c_attn", "c_proj", "c_fc"]
+    # LoRA setup for large models
+    if method == "lora":
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+        if "gpt2" in base_id.lower():
+            target_modules = ["c_attn", "c_proj", "c_fc"]
+        lora_config = LoraConfig(
+            r=128, lora_alpha=256, target_modules=target_modules,
+            lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM,
+        )
+        model = get_peft_model(model, lora_config)
 
-    lora_config = LoraConfig(
-        r=64, lora_alpha=128, target_modules=target_modules,
-        lora_dropout=0.05, bias="none", task_type=TaskType.CAUSAL_LM,
-    )
-    model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
     # Train
@@ -265,13 +226,18 @@ def fine_tune_one(base_id, target_repo, display, params):
     trainer = Trainer(model=model, args=args, train_dataset=dataset, data_collator=collator)
     trainer.train()
 
-    # Merge + save
+    # Save
     save_dir = f"/tmp/{target_repo}"
     if os.path.exists(save_dir):
         shutil.rmtree(save_dir)
-    print("Saving merged model...")
-    merged = model.merge_and_unload()
-    merged.save_pretrained(save_dir, safe_serialization=True)
+
+    print("Saving model...")
+    if method == "lora":
+        merged = model.merge_and_unload()
+        merged.save_pretrained(save_dir, safe_serialization=True)
+        del merged
+    else:
+        model.save_pretrained(save_dir, safe_serialization=True)
     tokenizer.save_pretrained(save_dir)
 
     # Fix config
@@ -286,24 +252,19 @@ def fine_tune_one(base_id, target_repo, display, params):
         cfg["architectures"] = ["Phi3ForCausalLM"]
     elif "phi-2" in base_id.lower() or "phi-1" in base_id.lower():
         cfg["architectures"] = ["PhiForCausalLM"]
-    elif "gpt2" in base_id.lower():
-        cfg["architectures"] = ["GPT2LMHeadModel"]
     with open(cfg_path, "w") as f:
         json.dump(cfg, f, indent=2)
 
-    # Upload model
+    # Upload
     repo_id = f"pinkelephantlimited/{target_repo}"
-    print(f"Uploading model to {repo_id}...")
+    print(f"Uploading to {repo_id}...")
     api.create_repo(repo_id, private=False, repo_type="model", exist_ok=True)
     api.upload_folder(folder_path=save_dir, repo_id=repo_id, ignore_patterns=["*.bin"])
-
-    # Upload README
-    readme = build_readme(base_id, target_repo, display, params)
+    readme = build_readme(base_id, target_repo, display, params, method)
     api.upload_file(path_or_fileobj=readme.encode(), path_in_repo="README.md", repo_id=repo_id, repo_type="model")
-
     print(f"✓ {display} done → https://huggingface.co/{repo_id}")
 
-    del model, merged, trainer
+    del model, trainer
     gc.collect()
     torch.cuda.empty_cache()
 
@@ -311,10 +272,9 @@ def fine_tune_one(base_id, target_repo, display, params):
 # ## 6. Run
 
 # %%
-for base_id, target, display, params in MODELS:
-    fine_tune_one(base_id, target, display, params)
+for base_id, target, display, params, method in MODELS:
+    fine_tune_one(base_id, target, display, params, method)
 
-print("\n✓ ALL 8 MODELS FINISHED!")
-print("Repos:")
-for _, target, display, params in MODELS:
+print("\n✓ ALL MODELS FINISHED!")
+for _, target, display, params, _ in MODELS:
     print(f"  https://huggingface.co/pinkelephantlimited/{target} — {display} {params}")
