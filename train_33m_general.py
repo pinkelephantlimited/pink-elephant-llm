@@ -138,6 +138,13 @@ from huggingface_hub import HfApi
 MODEL_NAME = "pink-elephant-33m"
 REPO_ID = f"pinkelephantlimited/{MODEL_NAME}"
 
+# Ensure repo exists
+try:
+    HfApi().create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
+    print(f"Repo {REPO_ID} ready")
+except Exception as e:
+    print(f"Repo check: {e}")
+
 class HFSaveCallback(TrainerCallback):
     def on_epoch_end(self, args, state, control, **kwargs):
         ckpt_dir = f"{args.output_dir}/checkpoint-{state.global_step}"
@@ -227,6 +234,7 @@ with open(cfg_path, "w") as f:
     json.dump(cfg, f, indent=2)
 
 api = HfApi()
+api.create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
 api.upload_folder(folder_path=save_dir, repo_id=REPO_ID,
                   ignore_patterns=["*.bin"])
 print(f"Uploaded: https://huggingface.co/{REPO_ID}")
