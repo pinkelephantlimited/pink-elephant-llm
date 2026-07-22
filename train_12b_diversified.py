@@ -159,7 +159,7 @@ except Exception as e:
 print(f"\n=== TOTAL: {len(train_texts)} examples ===")
 
 # %% [markdown]
-# ## 4. Train Tokenizer (vocab=16384)
+# ## 4. Train Tokenizer (vocab=4096)
 
 # %%
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
@@ -170,7 +170,7 @@ tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
 tokenizer.decoder = decoders.ByteLevel()
 
 trainer = trainers.BpeTrainer(
-    vocab_size=16384,
+    vocab_size=4096,
     special_tokens=["<unk>", "<s>", "</s>", "<pad>"],
     min_frequency=2,
 )
@@ -195,12 +195,12 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 from transformers import LlamaConfig, LlamaForCausalLM
 
 config = LlamaConfig(
-    vocab_size=hf_tokenizer.vocab_size,
-    hidden_size=4608,
-    intermediate_size=18432,
-    num_hidden_layers=36,
-    num_attention_heads=32,
-    max_position_embeddings=2048,
+    vocab_size=4096,
+    hidden_size=5120,
+    intermediate_size=13824,
+    num_hidden_layers=40,
+    num_attention_heads=40,
+    max_position_embeddings=4096,
     rope_theta=10000.0,
     tie_word_embeddings=True,
     torch_dtype=torch.bfloat16,
