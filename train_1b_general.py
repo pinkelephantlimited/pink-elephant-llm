@@ -13,7 +13,7 @@
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
 # **Architecture**: LLaMA ~1.1B params
-# **Data**: FineWeb-Edu + FineWeb + OpenWebMath + Nemotron-Legal + Investopedia (all verified Parquet)
+# **Data**: FineWeb-Edu + FineWeb + OpenWebMath + SmolLM (cosmopedia-v2) + CodeParrot + Nemotron-Legal + Investopedia (all verified Parquet)
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 # **Checkpoints**: Auto-uploaded to HF every 1000 steps — resume from any session
 
@@ -100,20 +100,18 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# 5. Code (SmolLM python-edu)
-print("=== 5. SmolLM Corpus (python-edu) ===")
+# 5. Code (codeparrot)
+print("=== 5. CodeParrot ===")
 try:
-    ds = load_dataset("HuggingFaceTB/smollm-corpus", "python-edu", split="train", streaming=True)
+    ds = load_dataset("transformersbook/codeparrot", split="train", streaming=True)
     count = 0
     for x in ds:
         if count >= 50000 or len(train_texts) >= MAX_TOTAL:
             break
-        for f in ["text", "content"]:
-            if f in x and x[f] and isinstance(x[f], str):
-                train_texts.append(x[f][:2048])
-                count += 1
-                break
-    print(f"  Python-edu: {count} loaded ({len(train_texts)} total)")
+        if "content" in x and x["content"] and isinstance(x["content"], str):
+            train_texts.append(x["content"][:2048])
+            count += 1
+    print(f"  CodeParrot: {count} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 

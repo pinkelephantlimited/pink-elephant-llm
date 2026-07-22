@@ -13,11 +13,12 @@
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
 # **Architecture**: LLaMA ~12.3B params
-# **Data**: FineWeb-Edu + FineWeb + OpenWebMath + Nemotron-Legal + Investopedia
+# **Data**: FineWeb-Edu + FineWeb + OpenWebMath + SmolLM (cosmopedia-v2) + CodeParrot + Nemotron-Legal + Investopedia
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
+# **Checkpoints**: Auto-uploaded to HF every 500 steps — resume from any session
 #
 # **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
-# All 7 sources are verified working (Parquet format, no gating, no missing configs).
+# All sources are verified working (Parquet format, no gating, no missing configs).
 
 # %% [markdown]
 # ## 1. Install Dependencies
@@ -50,8 +51,8 @@ print("Logged in!")
 # %%
 from datasets import load_dataset
 
-MAX_PER_SOURCE = 80000
-MAX_TOTAL = 400000
+MAX_PER_SOURCE = 100000
+MAX_TOTAL = 500000
 train_texts = []
 
 def add_from_ds(ds, key, limit, text_len=2048):
@@ -94,8 +95,40 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# 4. Legal: Nemotron (SAT for sure)
-print("=== 4. Nemotron-Legal ===")
+# 4. Books: SmolLM (cosmopedia-v2)
+print("=== 4. SmolLM Corpus (cosmopedia-v2) ===")
+try:
+    ds = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
+            break
+        for f in ["text", "content"]:
+            if f in x and x[f] and isinstance(x[f], str):
+                train_texts.append(x[f][:2048])
+                count += 1
+                break
+    print(f"  SmolLM: {count} loaded ({len(train_texts)} total)")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# 5. Code: codeparrot (mixed languages)
+print("=== 5. CodeParrot ===")
+try:
+    ds = load_dataset("transformersbook/codeparrot", split="train", streaming=True)
+    count = 0
+    for x in ds:
+        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
+            break
+        if "content" in x and x["content"] and isinstance(x["content"], str):
+            train_texts.append(x["content"][:2048])
+            count += 1
+    print(f"  CodeParrot: {count} loaded ({len(train_texts)} total)")
+except Exception as e:
+    print(f"  Error: {e}")
+
+# 6. Legal: Nemotron
+print("=== 6. Nemotron-Legal ===")
 try:
     ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1",
                       "Nemotron-Pretraining-Legal-Case-Law-Summary",
@@ -113,8 +146,8 @@ try:
 except Exception as e:
     print(f"  Error: {e}")
 
-# 5. Finance: Investopedia (SAT for sure)
-print("=== 5. Investopedia ===")
+# 7. Finance: Investopedia (SAT for sure)
+print("=== 7. Investopedia ===")
 try:
     ds = load_dataset("infCapital/investopedia_terms_en", split="train",
                       streaming=True)
@@ -155,8 +188,8 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# VRAM estimate: 24GB (bf16 weights) + 24GB (8bit Adam) + 12GB (grads) + ~8GB (acts) = ~68GB
-# 96GB GPU has ~28GB headroom. Could potentially increase batch size.
+# VRAM estimate: 24GB (bf16 weights) + 6GB (8bit Adam) + 12GB (grads) + ~15GB (acts @ batch=32) = ~57GB
+# 96GB GPU has plenty of headroom.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -213,8 +246,9 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=1, grad_accum=32 → effective 32
-# bf16 + 8bit Adam → ~68GB VRAM
+# batch=32, grad_accum=2 → effective 64
+# bf16 + 8bit Adam + gradient checkpointing
+# Saves every 500 steps and uploads to HF immediately.
 
 # %%
 from transformers import TrainingArguments, Trainer, TrainerCallback
@@ -223,7 +257,6 @@ from huggingface_hub import HfApi
 MODEL_NAME = "pink-elephant-12b"
 REPO_ID = f"pinkelephantlimited/{MODEL_NAME}"
 
-# Ensure repo exists
 HfApi().create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
 print(f"Repo {REPO_ID} ready")
 
@@ -231,26 +264,25 @@ class HFSaveCallback(TrainerCallback):
     def on_save(self, args, state, control, **kwargs):
         ckpt_dir = f"{args.output_dir}/checkpoint-{state.global_step}"
         if os.path.exists(ckpt_dir):
-            print(f"\nUploading checkpoint-{state.global_step} to HF...")
+            print(f"\nUploading checkpoint-{state.global_step}...")
             HfApi().upload_folder(
                 folder_path=ckpt_dir,
                 repo_id=REPO_ID,
                 path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
                 ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
             )
-            print(f"  -> Uploaded")
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=32,
+    per_device_train_batch_size=32,
+    gradient_accumulation_steps=2,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
     warmup_steps=500,
     logging_steps=10,
     save_strategy="steps",
-    save_steps=1000,
+    save_steps=500,
     save_total_limit=2,
     report_to="none",
     bf16=True,
