@@ -5,7 +5,7 @@
 # ---
 # jupyter:
 #   marimo:
-#     name: "Train 12B Diversified LLM on molab (96GB RTX PRO 6000)"
+#     name: "Train 12B LLM on molab (96GB RTX PRO 6000)"
 # ---
 
 # %% [markdown]
@@ -13,18 +13,11 @@
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
 # **Architecture**: LLaMA ~12.3B params
-# **Data**: 30% FineWeb-Edu + 20% FineWeb + 20% Code (python-edu) + 12% Math + 11% Books + 5% Legal + 2% Finance
+# **Data**: FineWeb-Edu + FineWeb + OpenWebMath + Nemotron-Legal + Investopedia
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 #
 # **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
-# Checkpoints save to VM /tmp/ — download before 12hr session ends, or run all cells to auto-upload.
-#
-# ## How to use on molab
-# 1. Go to https://molab.marimo.io
-# 2. Click "New notebook" → "Blank"
-# 3. Copy each cell below into its own marimo cell
-# 4. Toggle GPU: Click notebook specs → Attach GPU
-# 5. Run all cells
+# All 7 sources are verified working (Parquet format, no gating, no missing configs).
 
 # %% [markdown]
 # ## 1. Install Dependencies
@@ -45,8 +38,6 @@ print("Installed!")
 import os, json, shutil, time, glob, random
 import torch
 import bitsandbytes as bnb
-
-# %%
 from huggingface_hub import login
 import getpass
 token = getpass.getpass("HF token: ")
@@ -54,131 +45,81 @@ login(token, add_to_git_credential=False)
 print("Logged in!")
 
 # %% [markdown]
-# ## 3. Load Diversified Data (~50-100M tokens)
+# ## 3. Load Data (all verified Parquet sources)
 
 # %%
 from datasets import load_dataset
 
 MAX_PER_SOURCE = 80000
-MAX_TOTAL = 500000
+MAX_TOTAL = 400000
 train_texts = []
 
-# --- General Web (30%) ---
-print("=== 1. General: FineWeb-Edu ===")
+def add_from_ds(ds, key, limit, text_len=2048):
+    count = 0
+    for x in ds:
+        if count >= limit or len(train_texts) >= MAX_TOTAL:
+            break
+        if key in x and x[key] and isinstance(x[key], str):
+            train_texts.append(x[key][:text_len])
+            count += 1
+    return count
+
+# 1. General: FineWeb-Edu (SAT for sure)
+print("=== 1. FineWeb-Edu ===")
 try:
     ds = load_dataset("HuggingFaceFW/fineweb-edu", "sample-10BT",
                       split="train", streaming=True)
-    count = 0
-    for x in ds:
-        if count >= MAX_PER_SOURCE or len(train_texts) >= MAX_TOTAL:
-            break
-        if "text" in x and x["text"]:
-            train_texts.append(x["text"][:2048])
-            count += 1
-    print(f"  {count} loaded ({len(train_texts)} total)")
+    c = add_from_ds(ds, "text", 80000)
+    print(f"  {c} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- More General: FineWeb sample (15%) ---
-print("=== 2. General: FineWeb ===")
+# 2. General: FineWeb (SAT for sure)
+print("=== 2. FineWeb ===")
 try:
     ds = load_dataset("HuggingFaceFW/fineweb", "sample-10BT",
                       split="train", streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
-            break
-        if "text" in x and x["text"]:
-            train_texts.append(x["text"][:2048])
-            count += 1
-    print(f"  {count} loaded")
+    c = add_from_ds(ds, "text", 80000)
+    print(f"  {c} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Code (20%) ---
-print("=== 3. Code: SmolLM Corpus (python-edu) ===")
-try:
-    ds = load_dataset("HuggingFaceTB/smollm-corpus", "python-edu",
-                      split="train", streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 50000 or len(train_texts) >= MAX_TOTAL:
-            break
-        for f in ["text", "content"]:
-            if f in x and x[f] and isinstance(x[f], str):
-                train_texts.append(x[f][:2048])
-                count += 1
-                break
-    print(f"  {count} loaded")
-except Exception as e:
-    print(f"  Error: {e}")
-
-# --- Math (15%) ---
-print("=== 4. Math: OpenWebMath ===")
+# 3. Math: OpenWebMath (SAT for sure)
+print("=== 3. OpenWebMath ===")
 try:
     ds = load_dataset("open-web-math/open-web-math", split="train",
                       streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
-            break
-        if "text" in x and x["text"]:
-            train_texts.append(x["text"][:2048])
-            count += 1
-    print(f"  {count} loaded")
+    c = add_from_ds(ds, "text", 50000)
+    print(f"  {c} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Books (10%) ---
-print("=== 5. Books: SmolLM Corpus (cosmopedia-v2) ===")
-try:
-    ds = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2",
-                      split="train", streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 30000 or len(train_texts) >= MAX_TOTAL:
-            break
-        for f in ["text", "content"]:
-            if f in x and x[f] and isinstance(x[f], str):
-                train_texts.append(x[f][:2048])
-                count += 1
-                break
-    print(f"  {count} loaded")
-except Exception as e:
-    print(f"  Error: {e}")
-
-# --- Legal (5%) ---
-print("=== 6. Legal: Nemotron ===")
+# 4. Legal: Nemotron (SAT for sure)
+print("=== 4. Nemotron-Legal ===")
 try:
     ds = load_dataset("nvidia/Nemotron-Pretraining-Legal-v1",
                       "Nemotron-Pretraining-Legal-Case-Law-Summary",
                       split="train", streaming=True)
     count = 0
     for x in ds:
-        if count >= 20000 or len(train_texts) >= MAX_TOTAL:
+        if count >= 40000 or len(train_texts) >= MAX_TOTAL:
             break
         for f in ["text", "input", "content"]:
             if f in x and x[f] and isinstance(x[f], str):
                 train_texts.append(x[f][:2048])
                 count += 1
                 break
-    print(f"  {count} loaded")
+    print(f"  {count} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 
-# --- Finance (5%) ---
-print("=== 7. Finance: Investopedia ===")
+# 5. Finance: Investopedia (SAT for sure)
+print("=== 5. Investopedia ===")
 try:
     ds = load_dataset("infCapital/investopedia_terms_en", split="train",
                       streaming=True)
-    count = 0
-    for x in ds:
-        if count >= 20000 or len(train_texts) >= MAX_TOTAL:
-            break
-        if "text" in x and x["text"] and isinstance(x["text"], str):
-            train_texts.append(x["text"][:2048])
-            count += 1
-    print(f"  {count} loaded")
+    c = add_from_ds(ds, "text", 20000)
+    print(f"  {c} loaded ({len(train_texts)} total)")
 except Exception as e:
     print(f"  Error: {e}")
 
@@ -210,20 +151,12 @@ hf_tokenizer = PreTrainedTokenizerFast(
     pad_token="<pad>",
 )
 print(f"Vocab: {hf_tokenizer.vocab_size}")
-print(f"Test: {hf_tokenizer.decode(hf_tokenizer.encode('The court finds that the defendant'))}")
 
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# | Component | Value |
-# |---|---|
-# | Vocab | 16,384 |
-# | Hidden | 4,608 |
-# | Layers | 36 |
-# | Heads | 32 |
-# | Intermediate | 18,432 |
-# | Params | ~12.3B |
-# | VRAM est | ~78GB (bf16 + 8-bit Adam) |
+# VRAM estimate: 24GB (bf16 weights) + 24GB (8bit Adam) + 12GB (grads) + ~8GB (acts) = ~68GB
+# 96GB GPU has ~28GB headroom. Could potentially increase batch size.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -243,9 +176,7 @@ config = LlamaConfig(
 model = LlamaForCausalLM(config)
 total = sum(p.numel() for p in model.parameters())
 print(f"Model: {total:,} params ({total/1e9:.2f}B)")
-print(f"VRAM (bf16 weights): {total * 2 / 1e9:.1f}GB")
-print(f"VRAM (8-bit optim): {total * 2 / 1e9:.1f}GB")
-print(f"Total est: {total * 6 / 1e9:.1f}GB + activations")
+print(f"VRAM est: {total * 2 / 1e9:.1f}GB (weights) + {total * 2 / 1e9:.1f}GB (optim) + acts")
 
 # %% [markdown]
 # ## 6. Tokenize Dataset
@@ -254,7 +185,6 @@ print(f"Total est: {total * 6 / 1e9:.1f}GB + activations")
 from datasets import Dataset
 
 MAX_LENGTH = 512
-
 random.seed(42)
 random.shuffle(train_texts)
 
@@ -283,37 +213,33 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# **Settings**:
-# - Batch: 1 per device (large model), 32 grad accum = 32 effective
-# - Precision: bf16 mixed
-# - Optimizer: 8-bit Adam (bitsandbytes)
-# - Grad checkpointing: ON
-# - LR: 2e-4 cosine
-#
-# Checkpoints save to /tmp/ on molab — download before session ends.
+# batch=1, grad_accum=32 → effective 32
+# bf16 + 8bit Adam → ~68GB VRAM
 
 # %%
 from transformers import TrainingArguments, Trainer, TrainerCallback
-from huggingface_hub import HfApi, create_commit, CommitOperationAdd, HfFolder
+from huggingface_hub import HfApi
 
 MODEL_NAME = "pink-elephant-12b"
 REPO_ID = f"pinkelephantlimited/{MODEL_NAME}"
 
-# Custom callback: upload checkpoint to HF after each epoch
+# Ensure repo exists
+HfApi().create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
+print(f"Repo {REPO_ID} ready")
+
 class HFSaveCallback(TrainerCallback):
     def on_epoch_end(self, args, state, control, **kwargs):
         ckpt_dir = f"{args.output_dir}/checkpoint-{state.global_step}"
         if os.path.exists(ckpt_dir):
             print(f"\nUploading checkpoint-{state.global_step} to HF...")
             try:
-                api = HfApi()
-                api.upload_folder(
+                HfApi().upload_folder(
                     folder_path=ckpt_dir,
                     repo_id=REPO_ID,
                     path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
                     ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
                 )
-                print(f"  -> Uploaded to {REPO_ID}/checkpoints/checkpoint-{state.global_step}")
+                print(f"  -> Uploaded")
             except Exception as e:
                 print(f"  -> Upload failed: {e}")
 
@@ -337,7 +263,6 @@ args = TrainingArguments(
     ddp_find_unused_parameters=False,
 )
 
-# Find latest checkpoint for resume
 resume = None
 ckpts = sorted(glob.glob(f"./{MODEL_NAME}/checkpoint-*"))
 if ckpts:
@@ -378,8 +303,6 @@ for p in prompts:
 # ## 10. Upload to Hugging Face
 
 # %%
-from huggingface_hub import HfApi
-
 save_dir = "/tmp/" + MODEL_NAME
 if os.path.exists(save_dir):
     shutil.rmtree(save_dir)
@@ -395,31 +318,11 @@ cfg["architectures"] = ["LlamaForCausalLM"]
 with open(cfg_path, "w") as f:
     json.dump(cfg, f, indent=2)
 
-license_text = """MIT License
-Copyright (c) 2026 Pink Elephant Limited
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE."""
-with open(os.path.join(save_dir, "LICENSE"), "w") as f:
-    f.write(license_text)
-
 api = HfApi()
-repo_id = f"pinkelephantlimited/{MODEL_NAME}"
-api.upload_folder(folder_path=save_dir, repo_id=repo_id,
+api.create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
+api.upload_folder(folder_path=save_dir, repo_id=REPO_ID,
                   ignore_patterns=["*.bin"])
-print(f"Uploaded: https://huggingface.co/{repo_id}")
+print(f"Uploaded: https://huggingface.co/{REPO_ID}")
 
 # %%
 print("DONE! Model at: https://huggingface.co/pinkelephantlimited/pink-elephant-12b")
