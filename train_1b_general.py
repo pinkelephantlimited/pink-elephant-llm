@@ -270,7 +270,42 @@ resume = None
 ckpts = sorted(glob.glob(f"./{MODEL_NAME}/checkpoint-*"))
 if ckpts:
     resume = ckpts[-1]
-    print(f"Resuming from: {resume}")
+    print(f"Resuming from local checkpoint: {resume}")
+else:
+    print("No local checkpoints found. Checking HF for remote checkpoints...")
+    try:
+        api = HfApi()
+        files = api.list_repo_files(REPO_ID, repo_type="model")
+        ckpt_dirs = set()
+        for f in files:
+            if f.startswith("checkpoints/checkpoint-"):
+                parts = f.split("/")
+                if len(parts) >= 2:
+                    ckpt_dirs.add(parts[1])
+        if ckpt_dirs:
+            latest = sorted(ckpt_dirs)[-1]
+            local_path = f"./{MODEL_NAME}/{latest}"
+            print(f"Downloading remote checkpoint: {latest} -> {local_path}")
+            api.snapshot_download(
+                repo_id=REPO_ID,
+                repo_type="model",
+                allow_patterns=f"checkpoints/{latest}/*",
+                local_dir=f"./{MODEL_NAME}",
+                local_dir_use_symlinks=False,
+                ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
+            )
+            # rename checkpoints/checkpoint-6000 -> checkpoint-6000
+            src = f"./{MODEL_NAME}/checkpoints/{latest}"
+            dst = f"./{MODEL_NAME}/{latest}"
+            if os.path.exists(src) and not os.path.exists(dst):
+                shutil.move(src, dst)
+            if os.path.exists(dst):
+                resume = dst
+                print(f"Resuming from remote checkpoint: {resume}")
+            else:
+                print("Failed to move checkpoint")
+    except Exception as e:
+        print(f"Error downloading remote checkpoint: {e}")
 
 trainer = Trainer(
     model=model,
