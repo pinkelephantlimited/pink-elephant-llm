@@ -21,43 +21,67 @@ All models are trained on freely available GPUs (Google Colab T4, molab RTX Pro 
 
 | Model | Params | Description | Status | Hardware |
 |-------|--------|-------------|--------|----------|
-| [22M](https://huggingface.co/pinkelephantlimited/pink-elephant-22m) | **22M** | Lightweight code completion model with custom BPE tokenizer (vocab=8,192) | ✅ Released | Colab T4 |
-| [33M General](https://huggingface.co/pinkelephantlimited/pink-elephant-33m) | **33M** | General-purpose language model for text generation, trained on FineWeb-Edu | ✅ Released | molab RTX Pro 6000 |
-| [90M General](https://huggingface.co/pinkelephantlimited/pink-elephant-90m) | **95M** | General-purpose language model for text generation | ✅ Released | Colab T4 |
-| [12B General](https://huggingface.co/pinkelephantlimited/pink-elephant-12b) | **12.3B** | Large-scale general-purpose model with diversified training data | 🔄 Training | molab RTX Pro 6000 |
+| [22M](https://huggingface.co/pinkelephantlimited/pink-elephant-22m) | **22M** | Code completion + text generation (HumanEval + LAMBADA) | ✅ Released | Colab T4 |
+| [33M](https://huggingface.co/pinkelephantlimited/pink-elephant-33m) | **33M** | General-purpose text generation (FineWeb-Edu) | ✅ Released | molab RTX Pro 6000 |
+| [90M](https://huggingface.co/pinkelephantlimited/pink-elephant-90m) | **89M** | General-purpose text generation with GQA (FineWeb-Edu) | ✅ Released | Colab T4 |
+| [1B](https://huggingface.co/pinkelephantlimited/pink-elephant-1b) | **1.1B** | Multi-domain text gen (7 datasets: web, math, code, legal, finance) | 🔄 Training | molab RTX Pro 6000 |
+| [12B](https://huggingface.co/pinkelephantlimited/pink-elephant-12b) | **12.7B** | Large-scale general-purpose model with diversified training data | ⏳ Ready | molab RTX Pro 6000 |
 
 ---
 
 ## Model Details
 
-### Micro Coder (22M)
+### 22M — Code Completion & Text Generation
 
-A lightweight code completion model that demonstrates meaningful code generation can be achieved with minimal compute. Trained on a T4 GPU in under 2 minutes.
+A lightweight model demonstrating meaningful language generation with minimal compute. Trained on a T4 GPU in ~2 minutes.
 
 - **Architecture**: LLaMA, 8 layers, 384 hidden, 12 heads
 - **Tokenizer**: BPE (vocab=8,192), trained from scratch
 - **Context**: 1,024 tokens
-- **Training**: Code + natural language mix
-- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-micro-coder")`
+- **Data**: HumanEval (code) + LAMBADA (narrative text)
+- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-22m")`
 
-### 33M General
+### 33M — General-Purpose
 
-A compact general-purpose language model trained on FineWeb-Edu (educational web text). Designed for efficient inference on CPU and low-resource environments.
+A compact model optimized for CPU and low-resource environments.
 
 - **Architecture**: LLaMA, 8 layers, 512 hidden, 8 heads
 - **Tokenizer**: BPE (vocab=4,096), trained from scratch
 - **Context**: 2,048 tokens
-- **Training**: 150K examples from FineWeb-Edu sample-10BT
+- **Data**: 150K examples from FineWeb-Edu sample-10BT
 - **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-33m")`
 
-### 90M General
+### 90M — General-Purpose with GQA
 
-A general-purpose language model trained on narrative text. Good for story generation and creative writing tasks.
+A general-purpose model with Grouped-Query Attention (4 KV heads, 12 query heads) for efficient inference.
 
-- **Architecture**: LLaMA, 8 layers, 768 hidden, 12 heads
-- **Tokenizer**: GPT-2 tokenizer (vocab=50,257)
+- **Architecture**: LLaMA with GQA, 8 layers, 768 hidden, 12 heads, 4 KV heads
+- **Tokenizer**: GPT-2 (vocab=50,257)
 - **Context**: 1,024 tokens
+- **Data**: 150K examples from FineWeb-Edu sample-10BT
 - **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-90m")`
+
+### 1B — Multi-Domain General-Purpose
+
+A diverse model trained on 7 verified datasets spanning web text, mathematics, books, code, legal, and finance.
+
+- **Architecture**: LLaMA, 16 layers, 2,048 hidden, 16 heads
+- **Tokenizer**: BPE (vocab=16,384), trained from scratch
+- **Context**: 2,048 tokens
+- **Data**: FineWeb-Edu + FineWeb + OpenWebMath + SmolLM cosmopedia-v2 + CodeParrot + Nemotron-Legal + Investopedia (~410K examples)
+- **Training**: Batch 256, bf16, 8-bit Adam, checkpoints every 1K steps
+- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-1b")`
+
+### 12B — Large-Scale General-Purpose (12.7B params)
+
+The largest Pink Elephant model — configuration ready, training starts on molab.
+
+- **Architecture**: LLaMA, 40 layers, 5,120 hidden, 40 heads
+- **Tokenizer**: BPE (vocab=4,096), trained from scratch
+- **Context**: 4,096 tokens
+- **Data**: Same 7-dataset mix as 1B (~410K examples)
+- **Training Config**: Batch 32, grad accum 2, bf16, 8-bit Adam, VRAM ~57 GB
+- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-12b")`
 
 ---
 
@@ -73,10 +97,13 @@ All Pink Elephant models are trained **from scratch** — not fine-tuned from ex
 
 | Model | Notebook | Hardware |
 |-------|----------|----------|
-| 33M General | [train_33m_general.ipynb](https://huggingface.co/pinkelephantlimited/train-micro-coder/blob/main/train_33m_general.ipynb) | molab RTX Pro 6000 |
-| 12B General | [train_12b_diversified.py](https://huggingface.co/pinkelephantlimited/train-micro-coder/blob/main/train_12b_diversified.py) | molab RTX Pro 6000 |
+| 22M | [train_micro_coder.ipynb](https://huggingface.co/pinkelephantlimited/pink-elephant-22m/blob/main/train_micro_coder.ipynb) | Colab T4 |
+| 33M | [train_33m_general.ipynb](https://huggingface.co/pinkelephantlimited/pink-elephant-33m/blob/main/train_33m_general.ipynb) | molab RTX Pro 6000 |
+| 90M | [train_90m_general.ipynb](https://huggingface.co/pinkelephantlimited/pink-elephant-90m/blob/main/train_90m_general.ipynb) | Colab T4 |
+| 1B | [train_1b_general.py](https://github.com/pinkelephantlimited/pink-elephant-llm/blob/master/train_1b_general.py) | molab RTX Pro 6000 |
+| 12B | [train_12b_diversified.py](https://github.com/pinkelephantlimited/pink-elephant-llm/blob/master/train_12b_diversified.py) | molab RTX Pro 6000 |
 
-All notebooks are available in the [train-micro-coder](https://huggingface.co/pinkelephantlimited/train-micro-coder) repository.
+All scripts are in this GitHub repository.
 
 ---
 
@@ -89,9 +116,17 @@ from transformers import pipeline
 pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-22m")
 print(pipe("def fibonacci(n):", max_new_tokens=40)[0]["generated_text"])
 
-# 33M General — text generation
+# 33M — general text generation
 pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-33m")
 print(pipe("The future of AI is", max_new_tokens=80)[0]["generated_text"])
+
+# 90M — general text generation
+pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-90m")
+print(pipe("Once upon a time,", max_new_tokens=80)[0]["generated_text"])
+
+# 1B — multi-domain text generation
+pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-1b")
+print(pipe("The definition of artificial intelligence is", max_new_tokens=80)[0]["generated_text"])
 ```
 
 ---
