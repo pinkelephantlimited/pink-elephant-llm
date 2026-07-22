@@ -190,8 +190,8 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~8GB (acts @ batch=8) = ~83GB
-# 96GB GPU has ~13GB headroom.
+# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~12GB (acts @ batch=4, seq=4096) = ~87GB
+# 96GB GPU has ~9GB headroom.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -219,7 +219,7 @@ print(f"VRAM est: {total * 2 / 1e9:.1f}GB (weights) + {total * 2 / 1e9:.1f}GB (o
 # %%
 from datasets import Dataset
 
-MAX_LENGTH = 512
+MAX_LENGTH = 4096
 random.seed(42)
 random.shuffle(train_texts)
 
@@ -248,9 +248,10 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=8, grad_accum=4 → effective 32
+# batch=4, grad_accum=8 → effective 32
 # bf16 + 8bit Adam + gradient checkpointing
 # Saves every 500 steps and uploads to HF immediately.
+# Full 4096 context — ~87 GB VRAM, 9 GB headroom
 
 # %%
 from transformers import TrainingArguments, Trainer, TrainerCallback
@@ -276,8 +277,8 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=8,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=8,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
