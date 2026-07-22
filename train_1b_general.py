@@ -242,7 +242,7 @@ class HFSaveCallback(TrainerCallback):
                 folder_path=ckpt_dir,
                 repo_id=REPO_ID,
                 path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
-                ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
+                ignore_patterns=["*.bin", "optimizer.pt"],
             )
 
 args = TrainingArguments(
@@ -284,26 +284,23 @@ else:
                     ckpt_dirs.add(parts[1])
         if ckpt_dirs:
             latest = sorted(ckpt_dirs)[-1]
-            local_path = f"./{MODEL_NAME}/{latest}"
-            print(f"Downloading remote checkpoint: {latest} -> {local_path}")
-            api.snapshot_download(
-                repo_id=REPO_ID,
-                repo_type="model",
-                allow_patterns=f"checkpoints/{latest}/*",
-                local_dir=f"./{MODEL_NAME}",
-                local_dir_use_symlinks=False,
-                ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
-            )
-            # rename checkpoints/checkpoint-6000 -> checkpoint-6000
-            src = f"./{MODEL_NAME}/checkpoints/{latest}"
-            dst = f"./{MODEL_NAME}/{latest}"
-            if os.path.exists(src) and not os.path.exists(dst):
-                shutil.move(src, dst)
-            if os.path.exists(dst):
-                resume = dst
+            dst_dir = f"./{MODEL_NAME}/{latest}"
+            os.makedirs(dst_dir, exist_ok=True)
+            print(f"Downloading remote checkpoint: {latest}")
+            from huggingface_hub import hf_hub_download
+            for fname in ["config.json", "generation_config.json", "model.safetensors",
+                          "tokenizer.json", "tokenizer_config.json", "trainer_state.json"]:
+                try:
+                    path = hf_hub_download(repo_id=REPO_ID, filename=f"checkpoints/{latest}/{fname}", repo_type="model")
+                    shutil.copy2(path, os.path.join(dst_dir, fname))
+                    print(f"  Downloaded {fname}")
+                except Exception as e:
+                    print(f"  Skipped {fname} ({e})")
+            if os.path.exists(os.path.join(dst_dir, "trainer_state.json")):
+                resume = dst_dir
                 print(f"Resuming from remote checkpoint: {resume}")
             else:
-                print("Failed to move checkpoint")
+                print("Checkpoint download incomplete — starting from scratch")
     except Exception as e:
         print(f"Error downloading remote checkpoint: {e}")
 
