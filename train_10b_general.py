@@ -209,6 +209,7 @@ config = LlamaConfig(
 )
 
 model = LlamaForCausalLM(config)
+model = model.to(torch.bfloat16)
 total = sum(p.numel() for p in model.parameters())
 print(f"Model: {total:,} params ({total/1e9:.2f}B)")
 print(f"VRAM est: {total * 2 / 1e9:.1f}GB (weights) + {total * 2 / 1e9:.1f}GB (optim) + acts")
