@@ -228,20 +228,17 @@ HfApi().create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
 print(f"Repo {REPO_ID} ready")
 
 class HFSaveCallback(TrainerCallback):
-    def on_epoch_end(self, args, state, control, **kwargs):
+    def on_save(self, args, state, control, **kwargs):
         ckpt_dir = f"{args.output_dir}/checkpoint-{state.global_step}"
         if os.path.exists(ckpt_dir):
             print(f"\nUploading checkpoint-{state.global_step} to HF...")
-            try:
-                HfApi().upload_folder(
-                    folder_path=ckpt_dir,
-                    repo_id=REPO_ID,
-                    path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
-                    ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
-                )
-                print(f"  -> Uploaded")
-            except Exception as e:
-                print(f"  -> Upload failed: {e}")
+            HfApi().upload_folder(
+                folder_path=ckpt_dir,
+                repo_id=REPO_ID,
+                path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
+                ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
+            )
+            print(f"  -> Uploaded")
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
@@ -252,7 +249,8 @@ args = TrainingArguments(
     weight_decay=0.01,
     warmup_steps=500,
     logging_steps=10,
-    save_strategy="epoch",
+    save_strategy="steps",
+    save_steps=1000,
     save_total_limit=2,
     report_to="none",
     bf16=True,
