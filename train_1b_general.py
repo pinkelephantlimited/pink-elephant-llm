@@ -249,8 +249,8 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=8,
-    gradient_accumulation_steps=8,
+    per_device_train_batch_size=128,
+    gradient_accumulation_steps=1,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
@@ -264,7 +264,7 @@ args = TrainingArguments(
     optim="adamw_8bit",
     dataloader_num_workers=2,
     remove_unused_columns=False,
-    gradient_checkpointing=True,
+    gradient_checkpointing=False,
     ddp_find_unused_parameters=False,
 )
 
