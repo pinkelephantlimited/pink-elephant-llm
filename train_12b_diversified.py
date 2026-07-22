@@ -12,7 +12,7 @@
 # # Train 12B General-Purpose LLM on molab
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
-# **Architecture**: LLaMA ~12.3B params
+# **Architecture**: LLaMA ~12.7B params
 # **Data**: FineWeb-Edu + FineWeb + OpenWebMath + SmolLM (cosmopedia-v2) + CodeParrot + Nemotron-Legal + Investopedia
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 # **Checkpoints**: Auto-uploaded to HF every 500 steps — resume from any session
@@ -190,8 +190,8 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~12GB (acts @ batch=4, seq=4096) = ~87GB
-# 96GB GPU has ~9GB headroom.
+# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~7GB (acts @ batch=2, seq=4096) + ~5GB overhead = ~87GB
+# 96GB GPU has ~8GB headroom.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -248,10 +248,10 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=4, grad_accum=8 → effective 32
+# batch=2, grad_accum=16 → effective 32
 # bf16 + 8bit Adam + gradient checkpointing
 # Saves every 500 steps and uploads to HF immediately.
-# Full 4096 context — ~87 GB VRAM, 9 GB headroom
+# Full 40 layers, 4096 context — ~87 GB VRAM, 8 GB headroom
 
 # %%
 from transformers import TrainingArguments, Trainer, TrainerCallback
@@ -277,8 +277,8 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=8,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=16,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
