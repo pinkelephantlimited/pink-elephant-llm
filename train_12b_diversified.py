@@ -188,7 +188,7 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# VRAM estimate: 24GB (bf16 weights) + 6GB (8bit Adam) + 12GB (grads) + ~15GB (acts @ batch=32) = ~57GB
+# VRAM estimate: 24GB (bf16 weights) + 6GB (8bit Adam) + 12GB (grads) + ~10GB (acts @ batch=16) = ~52GB
 # 96GB GPU has plenty of headroom.
 
 # %%
@@ -246,7 +246,7 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=32, grad_accum=2 → effective 64
+# batch=16, grad_accum=2 → effective 32
 # bf16 + 8bit Adam + gradient checkpointing
 # Saves every 500 steps and uploads to HF immediately.
 
@@ -274,7 +274,7 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=32,
+    per_device_train_batch_size=16,
     gradient_accumulation_steps=2,
     num_train_epochs=10,
     learning_rate=2e-4,

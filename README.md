@@ -80,7 +80,7 @@ The largest Pink Elephant model — configuration ready, training starts on mola
 - **Tokenizer**: BPE (vocab=4,096), trained from scratch
 - **Context**: 4,096 tokens
 - **Data**: Same 7-dataset mix as 1B (~410K examples)
-- **Training Config**: Batch 32, grad accum 2, bf16, 8-bit Adam, VRAM ~57 GB
+- **Training Config**: Batch 16, grad accum 2, bf16, 8-bit Adam, VRAM ~52 GB
 - **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-12b")`
 
 ---
