@@ -86,22 +86,19 @@ def load_price_history(ticker):
     """Load 5 years of price data for a ticker."""
     try:
         stock = yf.Ticker(ticker)
-        hist = stock.history(period=f"{LOOKBACK_YEARS}y")
+        hist = stock.history(period=f"{LOOKBACK_YEARS}y", auto_adjust=False)
         if hist.empty or len(hist) < 60:
             return None
         return hist
-    except:
+    except Exception as e:
         return None
 
-def find_under_1_events(hist):
-    """Find periods where stock was below $1 for 30+ consecutive days.
-    Returns list of (start_date, end_date, outcome) tuples.
-    outcome: 'buy_up' (recovered above $1), 'reverse_split', 'delisted'"""
+def find_under_1_events(hist, ticker):
+    """Find periods where stock was below $1 for 30+ consecutive days."""
     events = []
     close = hist["Close"]
     below = (close < MIN_PRICE).astype(int)
     
-    # Find consecutive periods
     in_period = False
     period_start = None
     count = 0
@@ -117,7 +114,6 @@ def find_under_1_events(hist):
         else:
             if in_period and count >= CONSECUTIVE_DAYS:
                 period_end = close.index[i-1]
-                # Look forward 90 days to determine outcome
                 future = close.iloc[i:min(i+90, len(close))]
                 future_max = future.max() if not future.empty else close.iloc[-1]
                 
@@ -152,7 +148,7 @@ for t in NASDAQ_TICKERS:
     if hist is None:
         continue
     
-    events = find_under_1_events(hist)
+    events = find_under_1_events(hist, t)
     all_events.extend(events)
 
 print(f"\nFound {len(all_events)} delisting events across {tickers_scanned} stocks")
