@@ -131,6 +131,58 @@ print(pipe("The definition of artificial intelligence is", max_new_tokens=80)[0]
 
 ---
 
+## Real-World Applications
+
+### 22M — Embedded Code Autocomplete
+
+Runs on Raspberry Pi, WebAssembly browsers, or IoT devices. Sub-100ms on CPU.
+
+```python
+pipe("def fibonacci(n):", max_new_tokens=40)
+pipe("import pandas as pd\ndf = pd.read_csv('data.csv')\ndf.", max_new_tokens=40)
+```
+
+### 33M — Edge Text Generation
+
+Fits in 200MB RAM, runs on $5/month VPS. Educational Q&A, note autocomplete.
+
+```python
+pipe("The water cycle consists of", max_new_tokens=80)
+pipe("Photosynthesis is the process by which", max_new_tokens=80)
+```
+
+### 90M — Mobile Content Drafting
+
+GQA provides 3x faster inference on phone GPUs. Social media drafts, blog intros.
+
+```python
+pipe("5 tips for better sleep: 1.", max_new_tokens=100)
+pipe("The rise of remote work has fundamentally", max_new_tokens=100)
+```
+
+### 1B — Multi-Domain Assistant
+
+Customer support, legal clause drafting, finance summarization, code gen — all in one model.
+
+```python
+pipe("According to our return policy,", max_new_tokens=80)
+pipe("In accordance with IFRS standards,", max_new_tokens=80)
+pipe("The auditor shall review all", max_new_tokens=80)
+pipe("def train_model(model, data, epochs):", max_new_tokens=80)
+```
+
+### 12B — Enterprise Document Intelligence
+
+Largest in the family. Handles multi-paragraph legal/finance/code generation.
+
+```python
+pipe("The court finds that the defendant's actions", max_new_tokens=120)
+pipe("Based on the audited financial statements,", max_new_tokens=120)
+pipe("class DatabaseConnection:", max_new_tokens=120)
+```
+
+---
+
 ## License
 
 All models and code are released under the **MIT License**.
