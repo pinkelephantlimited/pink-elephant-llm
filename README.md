@@ -25,7 +25,7 @@ All models are trained on freely available GPUs (Google Colab T4, molab RTX Pro 
 | [33M](https://huggingface.co/pinkelephantlimited/pink-elephant-33m) | **33M** | General-purpose text generation (FineWeb-Edu) | ✅ Released | molab RTX Pro 6000 |
 | [90M](https://huggingface.co/pinkelephantlimited/pink-elephant-90m) | **89M** | General-purpose text generation with GQA (FineWeb-Edu) | ✅ Released | Colab T4 |
 | [1B](https://huggingface.co/pinkelephantlimited/pink-elephant-1b) | **1.1B** | Multi-domain text gen (7 datasets: web, math, code, legal, finance) | 🔄 Training | molab RTX Pro 6000 |
-| [12B](https://huggingface.co/pinkelephantlimited/pink-elephant-12b) | **12.7B** | Large-scale general-purpose model with diversified training data | ⏳ Ready | molab RTX Pro 6000 |
+| [10B](https://huggingface.co/pinkelephantlimited/pink-elephant-10b) | **9.85B** | Multi-domain text gen (7 datasets: web, math, code, legal, finance) | ⏳ Ready | molab RTX Pro 6000 |
 
 ---
 
@@ -72,16 +72,16 @@ A diverse model trained on 7 verified datasets spanning web text, mathematics, b
 - **Training**: Batch 256, bf16, 8-bit Adam, checkpoints every 1K steps
 - **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-1b")`
 
-### 12B — Large-Scale General-Purpose (12.7B params)
+### 10B — Large-Scale General-Purpose (9.85B params)
 
-The largest Pink Elephant model — configuration ready, training starts on molab.
+The largest Pink Elephant model — 31 layers, 5120 hidden, 4096 context. Trained on 7 diverse datasets.
 
-- **Architecture**: LLaMA, 40 layers, 5,120 hidden, 40 heads
+- **Architecture**: LLaMA, 31 layers, 5,120 hidden, 40 heads
 - **Tokenizer**: BPE (vocab=4,096), trained from scratch
 - **Context**: 4,096 tokens
-- **Data**: Same 7-dataset mix as 1B (~410K examples)
-- **Training Config**: Batch 8, grad accum 4, bf16, 8-bit Adam, VRAM ~52 GB
-- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-12b")`
+- **Data**: Same 7-dataset mix (~410K examples)
+- **Training Config**: Batch 4, grad accum 8, bf16, 8-bit Adam, VRAM ~75 GB
+- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-10b")`
 
 ---
 
@@ -101,7 +101,7 @@ All Pink Elephant models are trained **from scratch** — not fine-tuned from ex
 | 33M | [train_33m_general.ipynb](https://huggingface.co/pinkelephantlimited/pink-elephant-33m/blob/main/train_33m_general.ipynb) | molab RTX Pro 6000 |
 | 90M | [train_90m_general.ipynb](https://huggingface.co/pinkelephantlimited/pink-elephant-90m/blob/main/train_90m_general.ipynb) | Colab T4 |
 | 1B | [train_1b_general.py](https://github.com/pinkelephantlimited/pink-elephant-llm/blob/master/train_1b_general.py) | molab RTX Pro 6000 |
-| 12B | [train_12b_diversified.py](https://github.com/pinkelephantlimited/pink-elephant-llm/blob/master/train_12b_diversified.py) | molab RTX Pro 6000 |
+| 10B | [train_10b_general.py](https://github.com/pinkelephantlimited/pink-elephant-llm/blob/master/train_10b_general.py) | molab RTX Pro 6000 |
 
 All scripts are in this GitHub repository.
 
@@ -171,7 +171,7 @@ pipe("The auditor shall review all", max_new_tokens=80)
 pipe("def train_model(model, data, epochs):", max_new_tokens=80)
 ```
 
-### 12B — Enterprise Document Intelligence
+### 10B — Enterprise Document Intelligence
 
 Largest in the family. Handles multi-paragraph legal/finance/code generation.
 

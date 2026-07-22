@@ -5,19 +5,19 @@
 # ---
 # jupyter:
 #   marimo:
-#     name: "Train 12B LLM on molab (96GB RTX PRO 6000)"
+#     name: "Train 10B LLM on molab (96GB RTX PRO 6000)"
 # ---
 
 # %% [markdown]
-# # Train 12B General-Purpose LLM on molab
+# # Train 10B General-Purpose LLM on molab
 #
 # **GPU**: NVIDIA RTX Pro 6000 Blackwell (96GB VRAM) — free on molab
-# **Architecture**: LLaMA ~12.7B params
+# **Architecture**: LLaMA ~9.85B params
 # **Data**: FineWeb-Edu + FineWeb + OpenWebMath + SmolLM (cosmopedia-v2) + CodeParrot + Nemotron-Legal + Investopedia
 # **Precision**: BF16 + 8-bit Adam (bitsandbytes)
 # **Checkpoints**: Auto-uploaded to HF every 500 steps — resume from any session
 #
-# **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-12b
+# **OUTPUT**: Trained model uploads to https://huggingface.co/pinkelephantlimited/pink-elephant-10b
 # All sources are verified working (Parquet format, no gating, no missing configs).
 
 # %% [markdown]
@@ -188,10 +188,10 @@ hf_tokenizer = PreTrainedTokenizerFast(
 print(f"Vocab: {hf_tokenizer.vocab_size}")
 
 # %% [markdown]
-# ## 5. Create Model (~12.3B params)
+# ## 5. Create Model (~9.85B params)
 #
-# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~7GB (acts @ batch=2, seq=4096) + ~5GB overhead = ~87GB
-# 96GB GPU has ~8GB headroom.
+# VRAM estimate: 20GB (weights) + 20GB (8bit Adam) + 20GB (grads) + ~10GB (acts @ batch=4, seq=4096) + ~5GB overhead = ~75GB
+# 96GB GPU has ~21GB headroom.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -200,7 +200,7 @@ config = LlamaConfig(
     vocab_size=4096,
     hidden_size=5120,
     intermediate_size=13824,
-    num_hidden_layers=40,
+    num_hidden_layers=31,
     num_attention_heads=40,
     max_position_embeddings=4096,
     rope_theta=10000.0,
@@ -248,16 +248,16 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=2, grad_accum=16 → effective 32
+# batch=4, grad_accum=8 → effective 32
 # bf16 + 8bit Adam + gradient checkpointing
 # Saves every 500 steps and uploads to HF immediately.
-# Full 40 layers, 4096 context — ~87 GB VRAM, 8 GB headroom
+# 31 layers, 4096 context — ~75 GB VRAM, 21 GB headroom
 
 # %%
 from transformers import TrainingArguments, Trainer, TrainerCallback
 from huggingface_hub import HfApi
 
-MODEL_NAME = "pink-elephant-12b"
+MODEL_NAME = "pink-elephant-10b"
 REPO_ID = f"pinkelephantlimited/{MODEL_NAME}"
 
 HfApi().create_repo(REPO_ID, private=False, repo_type="model", exist_ok=True)
@@ -277,8 +277,8 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=16,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=8,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
@@ -358,4 +358,4 @@ api.upload_folder(folder_path=save_dir, repo_id=REPO_ID,
 print(f"Uploaded: https://huggingface.co/{REPO_ID}")
 
 # %%
-print("DONE! Model at: https://huggingface.co/pinkelephantlimited/pink-elephant-12b")
+print("DONE! Model at: https://huggingface.co/pinkelephantlimited/pink-elephant-10b")
