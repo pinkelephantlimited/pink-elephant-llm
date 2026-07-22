@@ -21,7 +21,7 @@ All models are trained on freely available GPUs (Google Colab T4, molab RTX Pro 
 
 | Model | Params | Description | Status | Hardware |
 |-------|--------|-------------|--------|----------|
-| [Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | **22M** | Lightweight code completion model with custom BPE tokenizer (vocab=8,192) | ✅ Released | Colab T4 |
+| [22M](https://huggingface.co/pinkelephantlimited/pink-elephant-22m) | **22M** | Lightweight code completion model with custom BPE tokenizer (vocab=8,192) | ✅ Released | Colab T4 |
 | [33M General](https://huggingface.co/pinkelephantlimited/pink-elephant-33m) | **33M** | General-purpose language model for text generation, trained on FineWeb-Edu | ✅ Released | molab RTX Pro 6000 |
 | [90M General](https://huggingface.co/pinkelephantlimited/pink-elephant-90m) | **95M** | General-purpose language model for text generation | ✅ Released | Colab T4 |
 | [12B General](https://huggingface.co/pinkelephantlimited/pink-elephant-12b) | **12.3B** | Large-scale general-purpose model with diversified training data | 🔄 Training | molab RTX Pro 6000 |
@@ -85,8 +85,8 @@ All notebooks are available in the [train-micro-coder](https://huggingface.co/pi
 ```python
 from transformers import pipeline
 
-# Micro Coder — code completion
-pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-micro-coder")
+# 22M — code completion
+pipe = pipeline("text-generation", model="pinkelephantlimited/pink-elephant-22m")
 print(pipe("def fibonacci(n):", max_new_tokens=40)[0]["generated_text"])
 
 # 33M General — text generation
