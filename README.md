@@ -23,7 +23,7 @@ All models are trained on freely available GPUs (Google Colab T4, molab RTX Pro 
 |-------|--------|-------------|--------|----------|
 | [Micro Coder](https://huggingface.co/pinkelephantlimited/pink-elephant-micro-coder) | **22M** | Lightweight code completion model with custom BPE tokenizer (vocab=8,192) | ✅ Released | Colab T4 |
 | [33M General](https://huggingface.co/pinkelephantlimited/pink-elephant-33m) | **33M** | General-purpose language model for text generation, trained on FineWeb-Edu | ✅ Released | molab RTX Pro 6000 |
-| [90M General](https://huggingface.co/pinkelephantlimited/real_model_90m) | **95M** | General-purpose language model for text generation | ✅ Released | Colab T4 |
+| [90M General](https://huggingface.co/pinkelephantlimited/pink-elephant-90m) | **95M** | General-purpose language model for text generation | ✅ Released | Colab T4 |
 | [12B General](https://huggingface.co/pinkelephantlimited/pink-elephant-12b) | **12.3B** | Large-scale general-purpose model with diversified training data | 🔄 Training | molab RTX Pro 6000 |
 
 ---
@@ -57,7 +57,7 @@ A general-purpose language model trained on narrative text. Good for story gener
 - **Architecture**: LLaMA, 8 layers, 768 hidden, 12 heads
 - **Tokenizer**: GPT-2 tokenizer (vocab=50,257)
 - **Context**: 1,024 tokens
-- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/real_model_90m")`
+- **Usage**: `pipeline("text-generation", model="pinkelephantlimited/pink-elephant-90m")`
 
 ---
 
