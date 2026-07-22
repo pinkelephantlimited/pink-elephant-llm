@@ -36,7 +36,9 @@ print("Installed!")
 # ## 2. Login to Hugging Face
 
 # %%
-import os, json, shutil, time, glob, random
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+import json, shutil, time, glob, random
 import torch
 import bitsandbytes as bnb
 from huggingface_hub import login
@@ -188,8 +190,8 @@ print(f"Vocab: {hf_tokenizer.vocab_size}")
 # %% [markdown]
 # ## 5. Create Model (~12.3B params)
 #
-# VRAM estimate: 24GB (bf16 weights) + 6GB (8bit Adam) + 12GB (grads) + ~10GB (acts @ batch=16) = ~52GB
-# 96GB GPU has plenty of headroom.
+# VRAM estimate: 25GB (weights) + 25GB (8bit Adam) + 25GB (grads) + ~8GB (acts @ batch=8) = ~83GB
+# 96GB GPU has ~13GB headroom.
 
 # %%
 from transformers import LlamaConfig, LlamaForCausalLM
@@ -246,7 +248,7 @@ collator = DataCollatorForLanguageModeling(
 # %% [markdown]
 # ## 8. Train (12hrs on molab)
 #
-# batch=16, grad_accum=2 → effective 32
+# batch=8, grad_accum=4 → effective 32
 # bf16 + 8bit Adam + gradient checkpointing
 # Saves every 500 steps and uploads to HF immediately.
 
@@ -274,8 +276,8 @@ class HFSaveCallback(TrainerCallback):
 
 args = TrainingArguments(
     output_dir="./" + MODEL_NAME,
-    per_device_train_batch_size=16,
-    gradient_accumulation_steps=2,
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=4,
     num_train_epochs=10,
     learning_rate=2e-4,
     weight_decay=0.01,
