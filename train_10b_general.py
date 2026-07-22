@@ -273,7 +273,7 @@ class HFSaveCallback(TrainerCallback):
                 folder_path=ckpt_dir,
                 repo_id=REPO_ID,
                 path_in_repo=f"checkpoints/checkpoint-{state.global_step}",
-                ignore_patterns=["*.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth"],
+                ignore_patterns=["*.bin", "optimizer.pt"],
             )
 
 args = TrainingArguments(
@@ -301,7 +301,38 @@ resume = None
 ckpts = sorted(glob.glob(f"./{MODEL_NAME}/checkpoint-*"))
 if ckpts:
     resume = ckpts[-1]
-    print(f"Resuming from: {resume}")
+    print(f"Resuming from local checkpoint: {resume}")
+else:
+    print("No local checkpoints. Checking HF for remote checkpoints...")
+    try:
+        api = HfApi()
+        files = api.list_repo_files(REPO_ID, repo_type="model")
+        ckpt_dirs = set()
+        for f in files:
+            if f.startswith("checkpoints/checkpoint-"):
+                if len(f.split("/")) >= 2:
+                    ckpt_dirs.add(f.split("/")[1])
+        if ckpt_dirs:
+            latest = sorted(ckpt_dirs)[-1]
+            dst_dir = f"./{MODEL_NAME}/{latest}"
+            os.makedirs(dst_dir, exist_ok=True)
+            print(f"Downloading remote checkpoint: {latest}")
+            from huggingface_hub import hf_hub_download
+            for fname in ["config.json", "generation_config.json", "model.safetensors",
+                          "tokenizer.json", "tokenizer_config.json", "trainer_state.json"]:
+                try:
+                    path = hf_hub_download(repo_id=REPO_ID, filename=f"checkpoints/{latest}/{fname}", repo_type="model")
+                    shutil.copy2(path, os.path.join(dst_dir, fname))
+                    print(f"  Downloaded {fname}")
+                except:
+                    pass
+            if os.path.exists(os.path.join(dst_dir, "trainer_state.json")):
+                resume = dst_dir
+                print(f"Resuming from remote checkpoint: {resume}")
+            else:
+                print("Checkpoint download incomplete — starting from scratch")
+    except Exception as e:
+        print(f"Error downloading checkpoint: {e}")
 
 trainer = Trainer(
     model=model,
